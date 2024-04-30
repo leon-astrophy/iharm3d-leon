@@ -1,22 +1,33 @@
+##############################################################################
+#
+# Make file for iharm3d, documented by Leon
+#
+##############################################################################
+
 # Problem to compile
 PROB = torus
 
 # Top directory of HDF5, or blank if using h5pcc
 HDF5_DIR =
+
 # Top directory of MPI, or blank if using mpicc
 # Highly recommended to use mpicc!
 MPI_DIR =
+
 # Top directory of GSL, or blank if installed to system
 GSL_DIR =
+
 # System /lib equivalent (can be /usr/lib, /lib64, /usr/lib64)
 # Can leave this blank if it's included automatically by GCC
 SYSTEM_LIBDIR = /lib64
 
 # Try pointing this to h5pcc on your machine, before hunting down libraries
 CC=h5pcc
+
 # Example CFLAGS for going fast with GCC
 CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -fopenmp -funroll-loops
 MATH_LIB = -lm
+
 # ICC does not like -lm and uses different flags
 #CFLAGS = -xCORE-AVX2 -Ofast -fstrict-aliasing -Wall -Werror -ipo -qopenmp
 #MATH_LIB =
@@ -42,6 +53,7 @@ ifneq (,$(findstring beginsbh,begins$(HOST)))
 endif
 -include $(MAKEFILE_PATH)/machines/$(HOST).make
 
+##############################################################################
 # Everything below this should be static
 
 ## VERSION PRESERVATION ##
