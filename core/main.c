@@ -92,7 +92,8 @@ int main(int argc, char *argv[])
       nthreads = omp_get_num_threads();
     }
   }
-
+  omp_set_num_threads(1);
+  
   ///////////////////////////////////////////////////////////////////////
   // TODO centralize more allocations here with safe, aligned _mm_malloc
   ///////////////////////////////////////////////////////////////////////
