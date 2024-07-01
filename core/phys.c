@@ -68,10 +68,15 @@ void prim_to_flux(struct GridGeom *G, struct FluidState *S, int i, int j, int k,
 
   //section for electrons
 #if ELECTRONS
-  for (int idx = KEL0; idx < NVAR ; idx++) {
+  for (int idx = KEL0; idx < NKEL ; idx++) {
     flux[idx][k][j][i] = flux[RHO][k][j][i]*S->P[idx][k][j][i];
   }
   flux[KTOT][k][j][i] = flux[RHO][k][j][i]*S->P[KTOT][k][j][i];
+#endif
+
+  // Leon's patch, positron mass //
+#if POSITRONS
+  flux[RPL][k][j][i] = S->P[RPL][k][j][i]*S->ucon[dir][k][j][i];
 #endif
 
   // add geometric factors to flux terms
@@ -125,10 +130,18 @@ GridPrim flux)
 #pragma omp for collapse(3)
   ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
     // RHO already includes a factor of gdet!
-    for (int idx = KEL0; idx < NVAR ; idx++) {
+    for (int idx = KEL0; idx < NKEL ; idx++) {
       flux[idx][k][j][i] = flux[RHO][k][j][i]*S->P[idx][k][j][i];
     }
     flux[KTOT][k][j][i] = flux[RHO][k][j][i]*S->P[KTOT][k][j][i];
+  }
+#endif
+
+  // Leon's patch, e-p mass //
+#if POSITRONS
+#pragma omp for collapse(3)
+  ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
+    flux[RPL][k][j][i] = S->P[RPL][k][j][i] * S->ucon[dir][k][j][i] * G->gdet[loc][j][i];
   }
 #endif
 }

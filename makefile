@@ -5,7 +5,7 @@
 ##############################################################################
 
 # Problem to compile
-PROB = torus
+PROB = pairs
 
 # Top directory of HDF5, or blank if using h5pcc
 HDF5_DIR =
@@ -25,7 +25,7 @@ SYSTEM_LIBDIR = /lib64
 CC=h5pcc
 
 # Example CFLAGS for going fast with GCC
-CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -fopenmp -funroll-loops
+CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -funroll-loops -fopenmp 
 MATH_LIB = -lm
 
 # ICC does not like -lm and uses different flags
@@ -133,15 +133,15 @@ vtune: build
 clean:
 	@echo "Cleaning build files..."
 	@rm -f $(EXE) $(OBJ)
-
+	
 distclean: clean
 	@echo "Cleaning config files..."
 	@rm -rf build_archive
 
-cleanfile:
-	@rm -rf ./dumps/*
-	@rm -rf ./figure/*
-	@rm -rf ./restarts/*
+cleanfile: 
+	@echo "Cleaning output files..."
+	@rm -rf dumps
+	@rm -rf restarts
 
 archive-invalidation: distclean
 

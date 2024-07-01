@@ -205,11 +205,18 @@ int U_to_P(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int lo
 
   // section for electrons
 #if ELECTRONS
-  for (int idx = KEL0; idx < NVAR ; idx++) {
+  for (int idx = KEL0; idx < NKEL ; idx++) {
     S->P[idx][k][j][i] = S->U[idx][k][j][i]/S->U[RHO][k][j][i];
   }
   S->P[KTOT][k][j][i] = S->U[KTOT][k][j][i]/S->U[RHO][k][j][i];
 #endif // ELECTRONS
+
+// Leon's patch, e-p pair mass //
+#if POSITRONS
+  double uts = gamma/lapse;
+  //S->P[RPL][k][j][i] = rho0;  
+  S->U[RPL][k][j][i]/uts/gdet;
+#endif
 
   return 0;
 }

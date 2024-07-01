@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     }
   }
   omp_set_num_threads(1);
-  
+
   ///////////////////////////////////////////////////////////////////////
   // TODO centralize more allocations here with safe, aligned _mm_malloc
   ///////////////////////////////////////////////////////////////////////
@@ -114,6 +114,9 @@ int main(int argc, char *argv[])
     if (mpi_io_proc())
       fprintf(stdout, "Initial conditions generated\n\n");
   }
+
+  // Leon's patch, set units //
+  set_units();
 
   // In case we're restarting and these changed
   tdump = t + DTd;
@@ -140,6 +143,11 @@ int main(int argc, char *argv[])
   //initialize
   time_init();
   int dumpThisStep = 0;
+
+  // Leon's patch. calculate isco radius here //
+  double z1 = 1 + pow(1 - a*a,1./3.)*(pow(1+a,1./3.) + pow(1-a,1./3.));
+  double z2 = sqrt(3*a*a + z1*z1);
+  Risco = 3 + z2 - sqrt((3-z1)*(3 + z1 + 2*z2));
 
   //advance in time
   while (t < tf) {

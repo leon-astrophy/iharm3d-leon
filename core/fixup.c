@@ -18,6 +18,11 @@
 #define HIT_FLOOR_GAMMA 32
 #define HIT_FLOOR_KTOT 64
 
+// Leon's patch, positrons //
+#if POSITRONS
+#define HIT_FLOOR_GEOM_RPL 128
+#endif
+
 // Point in m, around which to steepen floor prescription, eventually toward r^-3
 #define FLOOR_R_CHAR 10
 
@@ -140,6 +145,12 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   // Then apply floors:
   // 1. Geometric hard floors, not based on fluid relationships
   double rhoflr_geom, uflr_geom;
+
+  // Leon's patch, positrons //
+#if POSITRONS
+  double rplflr_geom;
+#endif
+
   if(METRIC == MKS) {
 
     // find r and theta
@@ -158,14 +169,31 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     // TODO These would only be hit at by r^-3 floors for r_out = 100,000M.  Worth keeping?
     rhoflr_geom = MY_MAX(rhoflr_geom, RHOMINLIMIT);
     uflr_geom = MY_MAX(uflr_geom, UUMINLIMIT);
+
+  // Leon's patch, positrons //
+#if POSITRONS
+    rplflr_geom = RPLMIN*rhoscal;
+    rplflr_geom = RPLMINLIMIT; //MY_MAX(rplflr_geom, RPLMINLIMIT);
+#endif
+
   } else if (METRIC == MINKOWSKI) {
     rhoflr_geom = RHOMIN*1.e-2;
     uflr_geom = UUMIN*1.e-2;
+
+    // Leon's patch, positrons //
+#if POSITRONS
+    rplflr_geom = RPLMIN*1.e-2;
+#endif
   }
 
   // Record Geometric floor hits
   if (rhoflr_geom > S->P[RHO][k][j][i]) fflag[k][j][i] |= HIT_FLOOR_GEOM_RHO;
   if (uflr_geom > S->P[UU][k][j][i]) fflag[k][j][i] |= HIT_FLOOR_GEOM_U;
+
+  // Leon's patch, positrons //
+#if POSITRONS
+  if (rplflr_geom > S->P[RPL][k][j][i]) fflag[k][j][i] |= HIT_FLOOR_GEOM_RPL;
+#endif
 
   // 2. Magnetic floors: impose maximum magnetization sigma = bsq/rho, inverse beta prop. to bsq/U
   //get_state(G, S, i, j, k, CENT); // called above
@@ -190,7 +218,18 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   // Evaluate highest RHO floor
   double rhoflr_max = MY_MAX(MY_MAX(rhoflr_geom, rhoflr_b), rhoflr_temp);
 
+  // Leon's patch, positrons //
+#if POSITRONS
+  double rplflr_max = rplflr_geom;
+#endif
+
+
+  // Leon's patch, positrons //
+#if POSITRONS
+  if (rhoflr_max > S->P[RHO][k][j][i] || uflr_max > S->P[UU][k][j][i] || rplflr_max > S->P[RPL][k][j][i]) { // Apply floors
+#else
   if (rhoflr_max > S->P[RHO][k][j][i] || uflr_max > S->P[UU][k][j][i]) { // Apply floors
+#endif
 
     // Initialize a dummy fluid parcel
     PLOOP {
@@ -201,6 +240,11 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     // Add mass and internal energy, but not velocity
     Stmp->P[RHO][k][j][i] = MY_MAX(0., rhoflr_max - S->P[RHO][k][j][i]);
     Stmp->P[UU][k][j][i] = MY_MAX(0., uflr_max - S->P[UU][k][j][i]);
+
+    // Leon's patch, positrons //
+#if POSITRONS
+    Stmp->P[RPL][k][j][i] = MY_MAX(0., rplflr_max - S->P[RPL][k][j][i]);
+#endif
 
     // Get conserved variables for the parcel
     get_state(G, Stmp, i, j, k, CENT);

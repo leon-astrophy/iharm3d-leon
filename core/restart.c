@@ -92,6 +92,10 @@ void restart_write_backend(struct FluidState *S, int type)
   hdf5_write_single_val(&dump_cnt, "dump_cnt", H5T_STD_I32LE);
   hdf5_write_single_val(&dt, "dt", H5T_IEEE_F64LE);
 
+  // Leon's patch, mass unit and black hole mass //
+  hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+
   // grid variables
 #if METRIC == MKS
   hdf5_write_single_val(&Rin, "Rin", H5T_IEEE_F64LE);
@@ -223,6 +227,11 @@ if (METRIC != MKS) {
   hdf5_read_single_val(&x3Min, "x3Min", H5T_IEEE_F64LE);
   hdf5_read_single_val(&x3Max, "x3Max", H5T_IEEE_F64LE);
 #endif
+
+  // Leon's patch, mass unit and black hole mass //
+  hdf5_read_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
+  hdf5_read_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+
 /////////////////////////////////////////////////////////////
 //  hdf5_read_single_val(&tdump, "tdump", H5T_IEEE_F64LE);
 //  hdf5_read_single_val(&tlog, "tlog", H5T_IEEE_F64LE);

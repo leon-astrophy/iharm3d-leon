@@ -52,19 +52,51 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   static GridDouble *data;
   char fname[80];
 
-  //choose what to output
+  // *********************************************************************************** //
+  // output file names //
+
+  // Electron heating present //
   #if ELECTRONS
+
+  // Using all models //
   #if ALLMODELS
+
+  // If there are positrons //
+  #if POSITRONS
+  const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3",
+                            "KTOT", "KEL0", "KEL1", "KEL2", "KEL3", "RPL"};
+  #else
   const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3",
                             "KTOT", "KEL0", "KEL1", "KEL2", "KEL3"};
+  #endif
+
+  // Only one model //
   #else
+
+  // If there are positrons //
+  #if POSITRONS
+  const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3",
+                            "KTOT", "KEL0", "RPL"};
+  #else  
   const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3",
                             "KTOT", "KEL0"};
   #endif
+
+  #endif
+
+  // Not including electron heating //
   #else
+
+  // If there are positrons //
+  #if POSITRONS
+  const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3", "RPL"};
+  #else 
   const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3"}; //Reserve some extra
   #endif
 
+  #endif
+  // *********************************************************************************** //
+  
   //allocate arrays
   static int firstc = 1;
   if(firstc) {
@@ -165,6 +197,10 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   hdf5_write_single_val(&cour, "cour", H5T_IEEE_F64LE);
   hdf5_write_single_val(&tf, "tf", H5T_IEEE_F64LE);
   hdf5_add_units("tf", "code");
+
+  // Leon's patch, mass unit and black hole mass //
+  hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
 
   //Geometry
   hdf5_make_directory("geom");

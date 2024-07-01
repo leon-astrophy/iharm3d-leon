@@ -39,7 +39,7 @@ void init_electrons(struct GridGeom *G, struct FluidState *S)
     S->P[KTOT][k][j][i] = (gam-1.)*S->P[UU][k][j][i]*pow(S->P[RHO][k][j][i],-gam);
 
     // Initialize model entropy(ies)
-    for (int idx = KEL0; idx < NVAR ; idx++) {
+    for (int idx = KEL0; idx < NKEL ; idx++) {
       S->P[idx][k][j][i] = (game-1.)*uel*pow(S->P[RHO][k][j][i],-game);
     }
   }
@@ -75,7 +75,7 @@ inline void heat_electrons_1zone(struct GridGeom *G, struct FluidState *Ss, stru
   //double uel = 1./(game-1.)*S->P[KEL][k][j][i]*pow(S->P[RHO][k][j][i],game);
 
   // Evolve model entropy(ies)
-  for (int idx = KEL0; idx < NVAR ; idx++) {
+  for (int idx = KEL0; idx < NKEL ; idx++) {
     double fel = get_fels(G, Ss, i, j, k, idx);
     Sf->P[idx][k][j][i] += (game-1.)/(gam-1.)*pow(Ss->P[RHO][k][j][i],gam-game)*fel*(kHarm - Sf->P[KTOT][k][j][i]);
   }
@@ -193,7 +193,7 @@ inline void fixup_electrons_1zone(struct FluidState *S, int i, int j, int k)
   double kelmin = S->P[KTOT][k][j][i]*pow(S->P[RHO][k][j][i],gam-game)/(tptemax*(gam-1.)/(gamp-1.) + (gam-1.)/(game-1.));
 
   // Replace NANs with cold electrons
-  for (int idx = KEL0; idx < NVAR ; idx++) {
+  for (int idx = KEL0; idx < NKEL ; idx++) {
     if (isnan(S->P[idx][k][j][i])) S->P[idx][k][j][i] = kelmin;
 	// Enforce maximum Tp/Te
     S->P[idx][k][j][i] = MY_MAX(S->P[idx][k][j][i], kelmin);

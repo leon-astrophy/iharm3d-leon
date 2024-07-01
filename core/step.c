@@ -5,6 +5,13 @@
 //* ADVANCES SIMULATION BY ONE TIMESTEP                                        *
 //*                                                                            *
 //******************************************************************************
+// Leon's comment: here, the system of hyperbolic PDE is evolved by the 
+// 2nd order RK method using method of lines. We can write the time-evolution
+// as: dy/dt = f(y,t). The first step is to evolve the equations by dt/2
+// i.e., y* = y0 + f(y0, t0)*(dt/2), t* = t0 + dt/2
+// Then, the variables y at the new time step is evolved as
+// y' = y0 + dt*f(y*, t*)
+// y is the conservative variables U, and f is the flux-difference + sources
 
 //import headers
 #include "decs.h"
@@ -59,6 +66,18 @@ void step(struct GridGeom *G, struct FluidState *S)
   FLAG("Heat Electrons Tmp");
 #endif
 
+  // Leon's patch, pair production
+#if POSITRONS
+  pair_production(G, S, Stmp, 0.5*dt);
+  FLAG("Pair Production Tmp");
+#endif
+
+  // Leon's patch, disk cooling //
+//#if COOLING
+//  rad_cooling(G, S, Stmp, 0.5*dt);
+//  FLAG("Radiative Cooling Tmp");
+//#endif
+
   // Set floor values to primitive variables 
   fixup(G, Stmp);
   FLAG("Fixup Tmp");
@@ -91,6 +110,18 @@ void step(struct GridGeom *G, struct FluidState *S)
   heat_electrons(G, Stmp, S);
   FLAG("Heat Electrons Full");
 #endif
+
+  // Leon's patch, pair production
+#if POSITRONS
+  pair_production(G, Stmp, S, dt);
+  FLAG("Pair Production Tmp");
+#endif
+
+  // Leon's patch, disk cooling //
+//#if COOLING
+//  rad_cooling(G, Stmp, S, dt);
+//  FLAG("Radiative Cooling Tmp");
+//#endif
 
   // Set floor values to primitive variables 
   fixup(G, S);
@@ -237,6 +268,16 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
   timer_stop(TIMER_UPDATE_U);
 
   //FLAG("Got Sf->U");
+
+  /******************************************************************/
+  // Leon's patch, add cooling here //
+  // Note that the final state Sf has already include addition from 
+  // the previous state Si and the flux difference, so no need to
+  // pass them to the cooling function 
+  #if COOLING
+    rad_cooling(G, Ss, Sf, Dt);
+    FLAG("Radiative Cooling Tmp");
+  #endif
 
   //convert from conservative to primitive variables
   timer_start(TIMER_U_TO_P);
