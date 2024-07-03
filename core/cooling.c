@@ -12,7 +12,7 @@
 #include "decs.h"
 #include "cooling.h"
 
-// compile only if poistrons flag is on //
+// compile only if cooling flag is on //
 #if COOLING
 
 //******************************************************************************
@@ -58,10 +58,14 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
 
   // cooling rate //
   double qdot_cool;
+  double t_cool_inv;
 
   // coordinate radius //
   coord(i, j, k, CENT, X);
   bl_coord(X, &rad, &theta);
+
+  // sin to the power //
+  double sin_pow = abs(pow(sin(theta), s_pow));
 
   // first, calculate covariant 4-velocity of the last step, at face center //
   ucon_calc(G, Ss, i, j, k, CENT);
@@ -91,22 +95,32 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   y_cool = (gam - 1.0)*eps_loc/tstar;
 
   // compute cooling rate //
-  if (y_cool < 1.0) {
-    qdot_cool = 0.0;
-  } else if (y_cool > 2.0) {
-    qdot_cool = 1.0;
+  // this is Fragile 2012 approach //
+  //if (y_cool < 1.0) {
+  //  qdot_cool = 0.0;
+  //} else if (y_cool > 2.0) {
+  //  qdot_cool = 1.0;
+  //} else {
+  //  qdot_cool = y_cool - 1.0;
+  //}
+
+  // Alternatively, I follow Prasun Dhang's approach //
+  if (y_cool > 1.0) {
+    qdot_cool = fmin(y_cool - 1.0, y_crit - 1.0);
   } else {
-    qdot_cool = y_cool - 1.0;
+    qdot_cool = 0.0;
   }
- 
+
   // multiply it by prefactor //
-  qdot_cool *= s_cool*omg_loc*rho_loc*eps_loc;
+  t_cool_inv = s_cool*omg_loc*sin_pow;
+  qdot_cool *= t_cool_inv*rho_loc*eps_loc;
 
   // cool the gass //
-  Sf->U[UU][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u0;
-  Sf->U[U1][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u1;
-  Sf->U[U2][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u2;
-  Sf->U[U3][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u3;
+  // Tab = Tab - (-g)^(1/2) ub qdot dt
+  Sf->U[UU][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u0 * dt_step;
+  Sf->U[U1][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u1 * dt_step;
+  Sf->U[U2][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u2 * dt_step;
+  Sf->U[U3][k][j][i] += -qdot_cool* G->gdet[CENT][j][i]*u3 * dt_step;
   
   //printf("isco %.3f\n", Risco);
   //exit(0);

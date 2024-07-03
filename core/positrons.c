@@ -49,6 +49,17 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double nelec = nprot + npost; // electron, by charge neutrality
   double ntot = nelec + nprot + npost; // total number density
 
+  // optical depth //
+  double tau_depth; 
+
+  // temperature graidents //
+  double tm1_x;
+  double tp1_x;
+  double tm1_y;
+  double tp1_y;
+  double tm1_z;
+  double tp1_z;
+
   // temperature //
   double Te = Ss->P[UU][k][j][i]*U_unit*(gam - 1.)/(ntot*KBOL); 
   double thetae = KBOL*Te/(ME*CL*CL);
