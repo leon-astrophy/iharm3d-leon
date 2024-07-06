@@ -348,6 +348,8 @@ extern struct FluidFlux preserve_F;
 extern GridPrim preserve_dU;
 #endif
 
+/*------------------------------------------------------------*/
+
 // Leon's patch, extra variables for cooling/pair productions //
 #if POSITRONS
   extern GridDouble temp; // plasma temperature
@@ -355,6 +357,8 @@ extern GridPrim preserve_dU;
 #ifdef COOLING
   extern GridDouble omg_gr; // angular velocity 
 #endif
+
+/*------------------------------------------------------------*/
 
 //********************************************************************************
 //*
@@ -411,8 +415,12 @@ extern double poly_norm, poly_xt, poly_alpha, mks_smooth;
 extern int global_start[3];
 extern int global_stop[3];
 
+/*------------------------------------------------------------*/
+
 // Leon's patch, seems like I need Risco every where ... //
 extern double R_isco;
+
+/*------------------------------------------------------------*/
 
 //*******************************************************************************
 //*
@@ -653,21 +661,21 @@ void report_performance();
 // u_to_p.c
 int U_to_P(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 
+/*------------------------------------------------------------*/
+
 // Leon's patch, positrons.c
 #if POSITRONS
 void set_units();
 void init_positrons(struct GridGeom *G, struct FluidState *S);
 void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
-void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
-void find_temp_1zone(struct GridGeom *G, struct FluidState *Ss, int i, int j, int k);
-double get_g_ann(double theta);
-double get_ee_prod(double theta);
 #endif
 
 // Leon's patch, cooling.c //
 #if COOLING
 void init_cooling(struct GridGeom *G);
 void rad_cooling(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
-void rad_cooling_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
 #endif
 
+/*------------------------------------------------------------*/
+
+//*******************************************************************************
