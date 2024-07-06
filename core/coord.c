@@ -113,7 +113,7 @@ inline double th_of_X(const double X[NDIM])
 
 //**************************************************************************
 
-// Boyer-Lindquist coordinate of point X
+// find r and theta //
 inline void bl_coord(const double X[NDIM], double *r, double *th)
 {
   *r = r_of_X(X);

@@ -6,6 +6,9 @@
 //*                                                                            *
 //******************************************************************************
 
+// positron header files //
+#include "positron.h"
+
 //include main headers
 #include "decs.h"
 
@@ -55,9 +58,11 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   // *********************************************************************************** //
   // output file names //
 
+  /****************************************************************/
   // Electron heating present //
   #if ELECTRONS
 
+  /*--------------------------------------------*/
   // Using all models //
   #if ALLMODELS
 
@@ -70,6 +75,7 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
                             "KTOT", "KEL0", "KEL1", "KEL2", "KEL3"};
   #endif
 
+  /*--------------------------------------------*/
   // Only one model //
   #else
 
@@ -82,8 +88,10 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
                             "KTOT", "KEL0"};
   #endif
 
+  /*--------------------------------------------*/
   #endif
 
+  /****************************************************************/
   // Not including electron heating //
   #else
 
@@ -94,7 +102,9 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   const char varNames[NVAR][HDF_STR_LEN] = {"RHO", "UU", "U1", "U2", "U3", "B1", "B2", "B3"}; //Reserve some extra
   #endif
 
+  /****************************************************************/
   #endif
+  
   // *********************************************************************************** //
   
   //allocate arrays
@@ -237,9 +247,9 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   ////////////////////////////////////////////////////////////////
   // I don't need this in code but it's in the spec to output it
   ////////////////////////////////////////////////////////////////
-  double z1 = 1 + pow(1 - a*a,1./3.)*(pow(1+a,1./3.) + pow(1-a,1./3.));
-  double z2 = sqrt(3*a*a + z1*z1);
-  double Risco = 3 + z2 - sqrt((3-z1)*(3 + z1 + 2*z2));
+  //double z1 = 1 + pow(1 - a*a,1./3.)*(pow(1+a,1./3.) + pow(1-a,1./3.));
+  //double z2 = sqrt(3*a*a + z1*z1);
+  double Risco = R_isco; //= 3 + z2 - sqrt((3-z1)*(3 + z1 + 2*z2));
   hdf5_write_single_val(&Risco, "r_isco", H5T_IEEE_F64LE);
   hdf5_write_single_val(&hslope, "hslope", H5T_IEEE_F64LE);
   hdf5_write_single_val(&a, "a", H5T_IEEE_F64LE);

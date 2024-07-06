@@ -564,7 +564,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   // initialize electronic variables
 #if ELECTRONS
   init_electrons(G,S);
-#endif
+#endif 
 
   // Leon's patch, positrons //
 #if POSITRONS

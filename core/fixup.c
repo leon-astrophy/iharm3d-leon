@@ -8,6 +8,7 @@
 
 //include header files
 #include "decs.h"
+#include "positron.h"
 
 // Floor Codes: bit masks
 #define HIT_FLOOR_GEOM_RHO 1

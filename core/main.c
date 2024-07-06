@@ -101,6 +101,11 @@ int main(int argc, char *argv[])
   struct GridGeom *G = calloc(1,sizeof(struct GridGeom));
   struct FluidState *S = calloc(1,sizeof(struct FluidState));
 
+  // Leon's patch. calculate isco radius here //
+  double z1 = 1 + pow(1 - a*a,1./3.)*(pow(1+a,1./3.) + pow(1-a,1./3.));
+  double z2 = sqrt(3*a*a + z1*z1);
+  R_isco = 3 + z2 - sqrt((3-z1)*(3 + z1 + 2*z2));
+
   // Perform initializations, either directly or via checkpoint
   is_restart = restart_init(G, S);
   if (!is_restart) {
@@ -115,8 +120,15 @@ int main(int argc, char *argv[])
       fprintf(stdout, "Initial conditions generated\n\n");
   }
 
+  // Leon's patch, initialize cooling //
+#if COOLING
+  init_cooling(G);
+#endif  
+
   // Leon's patch, set units //
+#if POSITRONS
   set_units();
+#endif  
 
   // In case we're restarting and these changed
   tdump = t + DTd;
@@ -143,11 +155,6 @@ int main(int argc, char *argv[])
   //initialize
   time_init();
   int dumpThisStep = 0;
-
-  // Leon's patch. calculate isco radius here //
-  double z1 = 1 + pow(1 - a*a,1./3.)*(pow(1+a,1./3.) + pow(1-a,1./3.));
-  double z2 = sqrt(3*a*a + z1*z1);
-  Risco = 3 + z2 - sqrt((3-z1)*(3 + z1 + 2*z2));
 
   //advance in time
   while (t < tf) {

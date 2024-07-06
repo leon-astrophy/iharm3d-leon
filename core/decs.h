@@ -66,12 +66,6 @@
 #define RHOMIN  (1.e-6)
 #define UUMIN (1.e-8)
 
-// Leon's patch, fixup parameters for positron //
-#if POSITRONS
-#define RPLMINLIMIT (1.e-30)
-#define RPLMIN  (1.e-6)
-#endif
-
 // Numerical convenience to represent a small (<< 1) non-zero quantity
 #define SMALL (1.e-20)
 
@@ -151,10 +145,14 @@
 #define B2  (6)
 #define B3  (7)
 
+/*************************************************/
 // Section for electrons //
 #if ELECTRONS
+
+// Total entropy //
 #define KTOT (8)
 
+/*-----------------------------------------*/
 // Nested if statement for ALLMODELS run
 #if ALLMODELS  
 
@@ -175,6 +173,7 @@
 #define NVAR (13)
 #endif
 
+/*-----------------------------------------*/
 // Only single model //
 #else
 
@@ -192,7 +191,9 @@
 #endif
 
 #endif
+/*-----------------------------------------*/
 
+/*************************************************/
 // No electrons 
 #else
 
@@ -205,6 +206,7 @@
 #endif
 
 #endif
+/*************************************************/
 
 // *********************************************************** // 
 
@@ -346,6 +348,14 @@ extern struct FluidFlux preserve_F;
 extern GridPrim preserve_dU;
 #endif
 
+// Leon's patch, extra variables for cooling/pair productions //
+#if POSITRONS
+  extern GridDouble temp; // plasma temperature
+#endif
+#ifdef COOLING
+  extern GridDouble omg_gr; // angular velocity 
+#endif
+
 //********************************************************************************
 //*
 //*    GLOBAL VARIABLES SECTION
@@ -385,18 +395,6 @@ extern int icurr, jcurr, kcurr;
 // Parallelism
 extern int nthreads;
 
-// Leon's patch, electron and proton mass is needed even if electrons = 0 //
-#define ME (9.1093826e-28  ) // Electron mass
-#define MP (1.67262171e-24 ) // Proton mass
-#define KBOL (1.3806505e-16  ) // Boltzmann constant
-#define GNEWT (6.6742e-8      ) // Gravitational constant
-#define CL (2.99792458e10  ) // Speed of light
-#define R_E (2.8179403262e-13  ) // classical electron radius
-#define A_F  (7.2973525693e-3  ) // fine structure constants 
-#define MSUN (1.989e33        ) // Solar mass
-extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh;
-extern double Risco; 
-
 // Electrons
 #if ELECTRONS
 // TODO put these in parameters.h? Define MP/ME direct?
@@ -413,9 +411,8 @@ extern double poly_norm, poly_xt, poly_alpha, mks_smooth;
 extern int global_start[3];
 extern int global_stop[3];
 
-// Leon's patch, for positrons //
-#if POSITRONS
-#endif 
+// Leon's patch, seems like I need Risco every where ... //
+extern double R_isco;
 
 //*******************************************************************************
 //*
@@ -555,21 +552,6 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S);
 double get_flux(struct GridGeom *G, struct FluidState *S, struct FluidFlux *F);
 void flux_ct(struct FluidFlux *F);
 
-// Leon's patch, positrons.c
-#if POSITRONS
-void init_positrons(struct GridGeom *G, struct FluidState *S);
-void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
-void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
-double get_g_ann(double theta);
-double get_ee_prod(double theta);
-#endif
-
-// Leon's patch, cooling.c //
-#if COOLING
-void rad_cooling(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
-void rad_cooling_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
-#endif
-
 /////////////////////////////////////
 // hdf5_utils.c has its own header
 /////////////////////////////////////
@@ -671,6 +653,21 @@ void report_performance();
 // u_to_p.c
 int U_to_P(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 
-// Leon's patch, set units in units.c //
+// Leon's patch, positrons.c
+#if POSITRONS
 void set_units();
+void init_positrons(struct GridGeom *G, struct FluidState *S);
+void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
+void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
+void find_temp_1zone(struct GridGeom *G, struct FluidState *Ss, int i, int j, int k);
+double get_g_ann(double theta);
+double get_ee_prod(double theta);
+#endif
+
+// Leon's patch, cooling.c //
+#if COOLING
+void init_cooling(struct GridGeom *G);
+void rad_cooling(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
+void rad_cooling_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step);
+#endif
 

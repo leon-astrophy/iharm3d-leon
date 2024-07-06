@@ -56,7 +56,7 @@
 #define X1R_INFLOW 0
 
 // Leon's patch, include positrons? //
-#define POSITRONS 0
+#define POSITRONS 1
 
 // Leon's patch, include radiative cooling? //
-#define COOLING 0 
+#define COOLING 1 
