@@ -49,7 +49,7 @@ void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidStat
 {
 
   /* do only if the flag for pair production is on */
-#ifdef PAIRS
+#if PAIRS
 
   /* First, calculate the plasma temperature */
   /* Need temperature at the ghost zone! */
