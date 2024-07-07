@@ -75,6 +75,15 @@ double tptemin, tptemax;
 int global_start[3];
 int global_stop[3];
 
+/*----------------------------------------*/
+
 // Leon's patch, unit coversion //
 double R_isco;
+
+// Leon's patch, unit conversion //
+#if POSITRONS
+double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh; 
+#endif
+
+/*----------------------------------------*/
 

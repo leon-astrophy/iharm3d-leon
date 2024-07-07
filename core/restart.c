@@ -7,9 +7,6 @@
 //*                                                                            *
 //******************************************************************************
 
-// positron header files //
-#include "positron.h"
-
 //include header files
 #include "decs.h"
 
@@ -95,10 +92,6 @@ void restart_write_backend(struct FluidState *S, int type)
   hdf5_write_single_val(&dump_cnt, "dump_cnt", H5T_STD_I32LE);
   hdf5_write_single_val(&dt, "dt", H5T_IEEE_F64LE);
 
-  // Leon's patch, mass unit and black hole mass //
-  hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
-  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
-
   // grid variables
 #if METRIC == MKS
   hdf5_write_single_val(&Rin, "Rin", H5T_IEEE_F64LE);
@@ -114,6 +107,16 @@ void restart_write_backend(struct FluidState *S, int type)
   hdf5_write_single_val(&x3Min, "x3Min", H5T_IEEE_F64LE);
   hdf5_write_single_val(&x3Max, "x3Max", H5T_IEEE_F64LE);
 #endif
+
+  /*--------------------------------------------------*/
+
+  // Leon's patch, mass unit and black hole mass //
+#if POSITRONS
+  hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+#endif 
+
+  /*--------------------------------------------------*/
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   // TODO these are unused.  Stop writing them when backward compatibility will not be an issue
@@ -231,9 +234,13 @@ if (METRIC != MKS) {
   hdf5_read_single_val(&x3Max, "x3Max", H5T_IEEE_F64LE);
 #endif
 
+  /*--------------------------------------------------*/
+
   // Leon's patch, mass unit and black hole mass //
+#if POSITRONS
   hdf5_read_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
   hdf5_read_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+#endif
 
 /////////////////////////////////////////////////////////////
 //  hdf5_read_single_val(&tdump, "tdump", H5T_IEEE_F64LE);

@@ -6,9 +6,6 @@
 //*                                                                            *
 //******************************************************************************
 
-// positron header files //
-#include "positron.h"
-
 //include main headers
 #include "decs.h"
 

@@ -30,9 +30,6 @@
 #define A_F  (7.2973525693e-3  ) // fine structure constants 
 #define MSUN (1.989e33        ) // Solar mass
 
-// Leon's patch, unit conversion //
-double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh; 
-
 // Leon's patch, important constants for pair production //
 #define zeta (1.0) // geometric factor
 #define eta (0.56145948356) // exp(-euler) 

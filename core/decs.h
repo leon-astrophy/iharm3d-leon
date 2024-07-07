@@ -420,6 +420,11 @@ extern int global_stop[3];
 // Leon's patch, seems like I need Risco every where ... //
 extern double R_isco;
 
+// Leon's patch, unit conversion //
+#if POSITRONS
+extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh; 
+#endif
+
 /*------------------------------------------------------------*/
 
 //*******************************************************************************

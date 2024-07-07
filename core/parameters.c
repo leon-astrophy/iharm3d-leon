@@ -10,7 +10,6 @@
 #include "decs.h"
 #include <sys/stat.h>
 #include <ctype.h>
-#include "positron.h"
 
 // O(n) dictionary for converting strings to pointers to global variables
 struct paramtable_entry {
