@@ -170,111 +170,114 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /* now calculate pair production rate */
 
   //if(!isnan(h_th)) {
-  
+    
     // net pair production rate, note the rate is in the CGS unit!!! //
     double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
     
     // positron mass production rate, need to convert to code unit!!! //
     double rhopdot = ME*net_rate*(T_unit/RHO_unit);
 
-    // quality factor //
-    double qfac = fabs(Ss->P[RPL][k][j][i]/rhopdot);
+    /* do these steps only if the production rate is non-zero */
+    if(fabs(rhopdot) > 0) {    
 
-    /* if the source term is too steep, implement implicit solver */
-    /* Crank-Nicolson method, inspired by Lia's thesis */
-    /* Basically a root finding, so use bisection mtehod */
-    double dummy;
-    if(dt_step > q_alpha*qfac) {
+      // quality factor //
+      double qfac = fabs(Ss->P[RPL][k][j][i]/rhopdot);
 
-      printf("mdot too steep\n");
+      /* if the source term is too steep, implement implicit solver */
+      /* Crank-Nicolson method, inspired by Lia's thesis */
+      /* Basically a root finding, so use bisection mtehod */
+      double dummy;
+      if(dt_step > q_alpha*qfac) {
 
-      /* left state */
-      double zl = zfrac;
-      double tl = t_c/(zl + 1)*(zfrac + 1);
-      double h_l = h_th*tl/t_c;
-      double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
-      double theta_l = thetae*tl/t_c;
-      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zl, taul, nprot, theta_l, h_l);
-      double fl = (zl - zfrac) - 0.5*dt_step*dummy/nprot;
+        printf("mdot too steep %d %d %d\n", i, j, k);
 
-      /* right state */
-      double zr = 1.0;
-      double tr = t_c/(zr + 1)*(zfrac + 1);
-      double h_r = h_th*tr/t_c;
-      double taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
-      double theta_r = thetae*tr/t_c;
-      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
-      double fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
+        /* left state */
+        double zl = zfrac;
+        double tl = t_c/(zl + 1)*(zfrac + 1);
+        double h_l = h_th*tl/t_c;
+        double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
+        double theta_l = thetae*tl/t_c;
+        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zl, taul, nprot, theta_l, h_l);
+        double fl = (zl - zfrac) - 0.5*dt_step*dummy/nprot;
 
-      /* if the right state guess is too poor, scale it up by 100 */
-      if(fr*fl > 0) {
-        zr = 100;
-        tr = t_c/(zr + 1)*(zfrac + 1);
-        h_r = h_th*tr/t_c;
-        taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
-        theta_r = thetae*tr/t_c;
+        /* right state */
+        double zr = 1.0;
+        double tr = t_c/(zr + 1)*(zfrac + 1);
+        double h_r = h_th*tr/t_c;
+        double taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+        double theta_r = thetae*tr/t_c;
         dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
-        fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
+        double fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
+
+        /* if the right state guess is too poor, scale it up by 100 */
         if(fr*fl > 0) {
-          printf("invalid guess in zfrac\n");
-          exit(0);
-        }
-      }
-
-      /* define the center state */
-      double zc, tc, h_c, tauc,theta_c, fc, zc_old;
-
-      /* bisection method counting */
-      int count;
-
-      /* now iterate until converges */
-      for (count = 0; count < 99999; count++) {
-
-        /* backup */
-        if(count > 0) {
-          zc_old = zc;
-        }
-
-        /* center state */
-        zc = 0.5*(zl + zr);
-        tc = t_c/(zc + 1)*(zfrac + 1);
-        h_c = h_th*tc/t_c;
-        tauc = 2.0*(2*zc + 1)*nprot*sigma_t*h_c;
-        theta_c = thetae*tc/t_c;
-        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zc, tauc, nprot, theta_c, h_c);
-        fc = (zc - zfrac) - 0.5*dt_step*dummy/nprot;
-
-        /* check the sign */
-        if (fl*fc > 0) {
-          zl = zc;
-        } else if (fr*fc > 0) {
-          zr = zc;
-        }
-
-        /* determine if need to exit */
-        if(count > 0) {
-          if(fabs(1.0 - zc_old/zc) < bisects) {
-            break;
+          zr = 100;
+          tr = t_c/(zr + 1)*(zfrac + 1);
+          h_r = h_th*tr/t_c;
+          taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+          theta_r = thetae*tr/t_c;
+          dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
+          fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
+          if(fr*fl > 0) {
+            printf("invalid guess in zfrac\n");
+            exit(0);
           }
         }
-      }
-      if(count == 99999) {
-        printf("No solution\n");
-	      exit(0);
-      }
 
-      /* assign new positron mass, remember to convert back to code unit !!! */
-      Sf->P[RPL][k][j][i] = zc*nprot*ME/RHO_unit;
-      
-    /* otherwise, march forward by time */
-    } else {
+        /* define the center state */
+        double zc, tc, h_c, tauc,theta_c, fc, zc_old;
 
-      Sf->P[RPL][k][j][i] += rhopdot*dt_step;
+        /* bisection method counting */
+        int count;
+
+        /* now iterate until converges */
+        for (count = 0; count < 99999; count++) {
+
+          /* backup */
+          if(count > 0) {
+            zc_old = zc;
+          }
+
+          /* center state */
+          zc = 0.5*(zl + zr);
+          tc = t_c/(zc + 1)*(zfrac + 1);
+          h_c = h_th*tc/t_c;
+          tauc = 2.0*(2*zc + 1)*nprot*sigma_t*h_c;
+          theta_c = thetae*tc/t_c;
+          dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zc, tauc, nprot, theta_c, h_c);
+          fc = (zc - zfrac) - 0.5*dt_step*dummy/nprot;
+
+          /* check the sign */
+          if (fl*fc > 0) {
+            zl = zc;
+          } else if (fr*fc > 0) {
+            zr = zc;
+          }
+
+          /* determine if need to exit */
+          if(count > 0) {
+            if(fabs(1.0 - zc_old/zc) < bisects) {
+              break;
+            }
+          }
+        }
+        if(count == 99999) {
+          printf("No solution\n");
+          exit(0);
+        }
+
+        /* assign new positron mass, remember to convert back to code unit !!! */
+        Sf->P[RPL][k][j][i] = zc*nprot*ME/RHO_unit;
+        
+      /* otherwise, march forward by time */
+      } else {
+
+        Sf->P[RPL][k][j][i] += rhopdot*dt_step;
+
+      }
 
     }
-
-  //}
-
+  
 }
 
 //******************************************************************************

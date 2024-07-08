@@ -11,7 +11,7 @@
 #include "decs.h"
 
 // do we calculate e-p pairs? //
-#define PAIRS 0
+#define PAIRS 1
 
 // are we initializing e-p pairs? //
 #define INIT_PAIRS 1
@@ -46,7 +46,7 @@
 #define q_alpha (0.3)
 
 // bisection threshold //
-#define bisects (1e-10)
+#define bisects (1e-6)
 
 //******************************************************************************
 /* define function here, which are not called globally */
