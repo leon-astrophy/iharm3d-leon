@@ -81,6 +81,7 @@ void prim_to_flux(struct GridGeom *G, struct FluidState *S, int i, int j, int k,
 
   // add geometric factors to flux terms
   PLOOP flux[ip][k][j][i] *= G->gdet[loc][j][i];
+
 }
 
 //*********************************************************************************************

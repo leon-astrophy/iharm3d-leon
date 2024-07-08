@@ -10,7 +10,7 @@
 #include "decs.h"
 
 // poistron header //
-#include "positron.h"
+#include "positrons.h"
 
 // Floor Codes: bit masks
 #define HIT_FLOOR_GEOM_RHO 1
@@ -175,8 +175,9 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
 
   // Leon's patch, positrons //
 #if POSITRONS
-    rplflr_geom = RPLMIN*rhoscal;
-    rplflr_geom = RPLMINLIMIT; //MY_MAX(rplflr_geom, RPLMINLIMIT);
+    rplflr_geom = RHOMIN*rhoscal;
+    rplflr_geom = MY_MAX(rplflr_geom, RHOMINLIMIT);
+    rplflr_geom = rplflr_geom*ZMIN*ME_MP;
 #endif
 
   } else if (METRIC == MINKOWSKI) {
@@ -185,7 +186,7 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
 
     // Leon's patch, positrons //
 #if POSITRONS
-    rplflr_geom = RPLMIN*1.e-2;
+    rplflr_geom = RHOMIN*1.e-2*ZMIN*ME_MP;
 #endif
   }
 
@@ -226,7 +227,6 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   double rplflr_max = rplflr_geom;
 #endif
 
-
   // Leon's patch, positrons //
 #if POSITRONS
   if (rhoflr_max > S->P[RHO][k][j][i] || uflr_max > S->P[UU][k][j][i] || rplflr_max > S->P[RPL][k][j][i]) { // Apply floors
@@ -243,6 +243,12 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     // Add mass and internal energy, but not velocity
     Stmp->P[RHO][k][j][i] = MY_MAX(0., rhoflr_max - S->P[RHO][k][j][i]);
     Stmp->P[UU][k][j][i] = MY_MAX(0., uflr_max - S->P[UU][k][j][i]);
+
+    // Leon's patch, the 3-velocity cannot be zero!!! 
+    // i.e, the fluid parcel should be comoving //
+    Stmp->P[U1][k][j][i] = S->P[U1][k][j][i];
+    Stmp->P[U2][k][j][i] = S->P[U2][k][j][i];
+    Stmp->P[U3][k][j][i] = S->P[U3][k][j][i];
 
     // Leon's patch, positrons //
 #if POSITRONS
@@ -262,7 +268,7 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
       S->U[ip][k][j][i] += Stmp->U[ip][k][j][i];
       S->P[ip][k][j][i] += Stmp->P[ip][k][j][i];
     }
-
+  
     // Recover primitive variables
     // CFG: do we get any failures here?
     pflag[k][j][i] = U_to_P(G, S, i, j, k, CENT);

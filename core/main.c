@@ -14,6 +14,9 @@
 #include <time.h>
 #include <sys/stat.h>
 
+// positron //
+#include "positrons.h"
+
 // main body of the program
 int main(int argc, char *argv[])
 {
@@ -128,6 +131,10 @@ int main(int argc, char *argv[])
   // Leon's patch, set units //
 #if POSITRONS
   set_units();
+  // Leon's patch, initialize positrons //
+#if INIT_PAIRS
+  init_positrons(G,S);
+#endif
 #endif  
 
   // In case we're restarting and these changed

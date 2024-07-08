@@ -155,8 +155,13 @@ inline void weno(double x1, double x2, double x3, double x4, double x5, double *
 
   // Nonlinear weights S11 9
   double den, wtr[3], Wr, wr[3], wtl[3], Wl, wl[3], eps;
-  eps=1.e-26;
 
+  // Leon's comment: my experience told me that we need a rather small 
+  // epsilon to make the scheme stable, I suggest 1.e-40, but I am unsure
+  // Maybe need to consult some numerics expert
+  eps=1.e-26;
+  //eps=1.e-40; 
+  
   den = eps + beta[0]; den *= den; wtr[0] = (1./16.)/den;
   den = eps + beta[1]; den *= den; wtr[1] = (5./8. )/den;
   den = eps + beta[2]; den *= den; wtr[2] = (5./16.)/den;

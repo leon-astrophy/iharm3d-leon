@@ -14,6 +14,7 @@
 #define ERRTOL  1.e-8
 #define ITERMAX 8
 #define DEL 1.e-5
+#define ME_MP 0.0005446170214888188
 
 //define function 
 double Pressure_rho0_u(double rho0, double u);
@@ -213,11 +214,10 @@ int U_to_P(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int lo
 
 // Leon's patch, e-p pair mass //
 #if POSITRONS
-  double uts = gamma/lapse;
-  //S->P[RPL][k][j][i] = rho0;  
-  S->U[RPL][k][j][i]/uts/gdet;
+  S->P[RPL][k][j][i] = S->U[RPL][k][j][i]*lapse/gamma/gdet;
 #endif
 
+  // return //
   return 0;
 }
 

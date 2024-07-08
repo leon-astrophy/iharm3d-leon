@@ -81,6 +81,9 @@ void rad_cooling(struct GridGeom *G, struct FluidState *Ss, struct FluidState *S
 //******************************************************************************
 
 // compute pair production rate per grid cells //
+// IMPORTANT: Sf has already included flux difference and previous stage information
+// DO NOT use Sf to calculate the cooling rate, use Ss instead, which is the previous 
+// stage's primitive/conservative variables
 inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step)
 {
   // define 4-velocity 

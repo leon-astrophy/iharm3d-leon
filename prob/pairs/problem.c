@@ -566,11 +566,6 @@ void init(struct GridGeom *G, struct FluidState *S)
   init_electrons(G,S);
 #endif 
 
-  // Leon's patch, positrons //
-#if POSITRONS
-  init_positrons(G,S);
-#endif
-
   // apply floors and ceilings
   fixup(G, S);
 

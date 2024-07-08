@@ -39,7 +39,7 @@
 
 //* RECONSTRUCTION ALGORITHM:
 //* LINEAR, PPM, WENO, MP5
-#define RECONSTRUCTION WENO
+#define RECONSTRUCTION WENO 
 
 //* BOUNDARY CONDITIONS
 //* OUTFLOW PERIODIC POLAR USER
@@ -59,4 +59,4 @@
 #define POSITRONS 1
 
 // Leon's patch, include radiative cooling? //
-#define COOLING 1 
+#define COOLING 0 

@@ -15,6 +15,7 @@
 
 //import headers
 #include "decs.h"
+#include "positrons.h"
 
 // delcare fuctions
 double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct FluidState *Ss, struct FluidState *Sf, double Dt);
@@ -56,7 +57,12 @@ void step(struct GridGeom *G, struct FluidState *S)
   // TODO add back well-named flags /after/ events
   ///////////////////////////////////////////////////
 
-  // Predictor setup
+  /*-------------------------------------------------------------------------*/
+  // Predictor setup, here, Stmp is empty, but then when passed to
+  // advanced_fluid, it will get compies from S, Stmp then becomes the 
+  // variables at half time step, y*, as stated above
+
+  // evolve by half dt
   advance_fluid(G, S, S, Stmp, 0.5*dt);
   FLAG("Advance Fluid Tmp");
 
@@ -67,16 +73,13 @@ void step(struct GridGeom *G, struct FluidState *S)
 #endif
 
   // Leon's patch, pair production
+  /* do only if the flag for pair production is on */
 #if POSITRONS
+#if PAIRS
   pair_production(G, S, Stmp, 0.5*dt);
   FLAG("Pair Production Tmp");
 #endif
-
-  // Leon's patch, disk cooling //
-//#if COOLING
-//  rad_cooling(G, S, Stmp, 0.5*dt);
-//  FLAG("Radiative Cooling Tmp");
-//#endif
+#endif 
 
   // Set floor values to primitive variables 
   fixup(G, Stmp);
@@ -100,8 +103,11 @@ void step(struct GridGeom *G, struct FluidState *S)
   //after that, set boundary conditions again
   set_bounds(G, Stmp);
   FLAG("Second bounds Tmp");
+  
+  /*-------------------------------------------------------------------------*/
+  // Corrector step, here, Stmp is the half time-step variables y*
 
-  // Corrector step
+  // evolve by dt
   double ndt = advance_fluid(G, S, Stmp, S, dt);
   FLAG("Advance Fluid Full");
 
@@ -112,16 +118,13 @@ void step(struct GridGeom *G, struct FluidState *S)
 #endif
 
   // Leon's patch, pair production
+  /* do only if the flag for pair production is on */
 #if POSITRONS
+#if PAIRS
   pair_production(G, Stmp, S, dt);
   FLAG("Pair Production Tmp");
 #endif
-
-  // Leon's patch, disk cooling //
-//#if COOLING
-//  rad_cooling(G, Stmp, S, dt);
-//  FLAG("Radiative Cooling Tmp");
-//#endif
+#endif
 
   // Set floor values to primitive variables 
   fixup(G, S);
@@ -142,6 +145,8 @@ void step(struct GridGeom *G, struct FluidState *S)
   //after that, set boundary conditions again
   set_bounds(G, S);
   FLAG("Second bounds Full");
+  
+  /*-------------------------------------------------------------------------*/
 
   // Increment time
   t += dt;
@@ -245,9 +250,9 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
   get_fluid_source(G, Ss, dU);
 
   // Find conservative variables for the last time step'
-  ////////////////////////////////////////
-  // TODO skip this call if Si,Ss aliased
-  ////////////////////////////////////////
+  /////////////////////////////////////////////
+  // TODO skip this call if Si,Ss are aliased
+  /////////////////////////////////////////////
   get_state_vec(G, Si, CENT, 0, N3 - 1, 0, N2 - 1, 0, N1 - 1);
   prim_to_flux_vec(G, Si, 0, CENT, 0, N3 - 1, 0, N2 - 1, 0, N1 - 1, Si->U);
 
@@ -271,9 +276,10 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
 
   /******************************************************************/
   // Leon's patch, add cooling here //
-  // Note that the final state Sf has already include addition from 
-  // the previous state Si and the flux difference, so no need to
-  // pass them to the cooling function 
+  // Note that the final state Sf has already include addition 
+  // from the previous state Si and the flux difference
+  // we pass only Ss but not Si because the RHS of the ODE dy/dt
+  // depends only either the previous step y0 or intermediate y*
   #if COOLING
     rad_cooling(G, Ss, Sf, Dt);
     FLAG("Radiative Cooling Tmp");

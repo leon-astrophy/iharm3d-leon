@@ -10,7 +10,7 @@
 // header files
 #include "math.h"
 #include "decs.h"
-#include "positron.h"
+#include "positrons.h"
 #include <gsl/gsl_sf_bessel.h>
 
 // compile only if poistrons flag is on //
@@ -33,13 +33,17 @@ void set_units()
 //initialize positrons variables
 void init_positrons(struct GridGeom *G, struct FluidState *S)
 {
+  
   ZLOOPALL {
-    // Set initial e-p mass to be the rest mass 
-    S->P[RPL][k][j][i] = RPLMINLIMIT; //S->P[RHO][k][j][i];
+
+    // Set positron mass to its floor values //
+    S->P[RPL][k][j][i] = ZMIN*ME_MP*S->P[RHO][k][j][i];
+
   }
 
   // Necessary?  Usually called right afterward
   set_bounds(G, S);
+
 }
 
 //******************************************************************************
@@ -47,9 +51,6 @@ void init_positrons(struct GridGeom *G, struct FluidState *S)
 // Compute net pair production rate //
 void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step)
 {
-
-  /* do only if the flag for pair production is on */
-#if PAIRS
 
   /* First, calculate the plasma temperature */
   /* Need temperature at the ghost zone! */
@@ -63,8 +64,6 @@ void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidStat
   ZLOOP {
     pair_production_1zone(G, Ss, Sf, i, j, k, dt_step);
   }
-
-#endif
 
 }
 
@@ -113,7 +112,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double tm1_z= temp[k-1][j][i], tp1_z= temp[k+1][j][i];
 
   // temperature at i,,k //
-  double tc = temp[k][j][i];
+  double t_c = temp[k][j][i];
 
   /***********************************************************************/
   
@@ -156,7 +155,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /***********************************************************************/
 
   // get the thermal scale height, remeber to convert to CGS //
-  double h_th = 0.25*tc/norm_gradT*L_unit;
+  double h_th = 0.25*t_c/norm_gradT*L_unit;
 
   // optical depth //
   double tau_depth = 2.0*(nelec + npost)*sigma_t*h_th; 
@@ -164,22 +163,22 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /***********************************************************************/
 
   // dimensionless temperature and postiron fraction //
-  double thetae = KBOL*tc/(ME*CL*CL); 
+  double thetae = KBOL*t_c/(ME*CL*CL); 
   double zfrac = npost/nprot;
 
   /***********************************************************************/
   /* now calculate pair production rate */
 
-  if(!isnan(h_th)) {
+  //if(!isnan(h_th)) {
   
     // net pair production rate, note the rate is in the CGS unit!!! //
     double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
     
     // positron mass production rate, need to convert to code unit!!! //
-    double mdots = ME*net_rate*(T_unit/RHO_unit);
+    double rhopdot = ME*net_rate*(T_unit/RHO_unit);
 
     // quality factor //
-    double qfac = fabs(Ss->P[RPL][k][j][i]/mdots);
+    double qfac = fabs(Ss->P[RPL][k][j][i]/rhopdot);
 
     /* if the source term is too steep, implement implicit solver */
     /* Crank-Nicolson method, inspired by Lia's thesis */
@@ -187,25 +186,34 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     double dummy;
     if(dt_step > q_alpha*qfac) {
 
-      //printf("du3dt too steep\n");
+      printf("mdot too steep\n");
 
       /* left state */
       double zl = zfrac;
-      double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_th;
-      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zl, taul, nprot, thetae, h_th);
+      double tl = t_c/(zl + 1)*(zfrac + 1);
+      double h_l = h_th*tl/t_c;
+      double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
+      double theta_l = thetae*tl/t_c;
+      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zl, taul, nprot, theta_l, h_l);
       double fl = (zl - zfrac) - 0.5*dt_step*dummy/nprot;
 
       /* right state */
       double zr = 1.0;
-      double taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_th;
-      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, thetae, h_th);
+      double tr = t_c/(zr + 1)*(zfrac + 1);
+      double h_r = h_th*tr/t_c;
+      double taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+      double theta_r = thetae*tr/t_c;
+      dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
       double fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
 
       /* if the right state guess is too poor, scale it up by 100 */
       if(fr*fl > 0) {
         zr = 100;
-        taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_th;
-        ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, thetae, h_th);
+        tr = t_c/(zr + 1)*(zfrac + 1);
+        h_r = h_th*tr/t_c;
+        taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+        theta_r = thetae*tr/t_c;
+        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
         fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
         if(fr*fl > 0) {
           printf("invalid guess in zfrac\n");
@@ -214,7 +222,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       }
 
       /* define the center state */
-      double zc, tauc, fc, zc_old;
+      double zc, tc, h_c, tauc,theta_c, fc, zc_old;
 
       /* bisection method counting */
       int count;
@@ -229,9 +237,12 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
         /* center state */
         zc = 0.5*(zl + zr);
-        tauc = 2.0*(2*zc + 1)*nprot*sigma_t*h_th;
-        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zc, tauc, nprot, thetae, h_th);
-        fc = (zl - zfrac) - 0.5*dt_step*dummy/nprot;
+        tc = t_c/(zc + 1)*(zfrac + 1);
+        h_c = h_th*tc/t_c;
+        tauc = 2.0*(2*zc + 1)*nprot*sigma_t*h_c;
+        theta_c = thetae*tc/t_c;
+        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zc, tauc, nprot, theta_c, h_c);
+        fc = (zc - zfrac) - 0.5*dt_step*dummy/nprot;
 
         /* check the sign */
         if (fl*fc > 0) {
@@ -247,18 +258,22 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
           }
         }
       }
+      if(count == 99999) {
+        printf("No solution\n");
+	      exit(0);
+      }
 
       /* assign new positron mass, remember to convert back to code unit !!! */
-      Sf->P[RPL][k][j][i] = zc*nprot*ME*(T_unit/RHO_unit);
-
+      Sf->P[RPL][k][j][i] = zc*nprot*ME/RHO_unit;
+      
     /* otherwise, march forward by time */
     } else {
 
-      Sf->P[RPL][k][j][i] += mdot*dt_step;
+      Sf->P[RPL][k][j][i] += rhopdot*dt_step;
 
     }
 
-  }
+  //}
 
 }
 
@@ -290,12 +305,13 @@ inline double get_ndotee(double nprot, double z, double theta) {
 
 /* pair production rate due to photon-photon or photon-particle collision */
 inline double ncdot(double ngamma, double theta, double nprot, double z, double n1, double fb, double ndotbr) {
-  double ndotww = get_ndotww(ngamma, theta);
-  double ndotwp = get_ndotwp(ngamma, nprot, theta);
-  double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
-  double ndotwf = get_ndotwf(n1, ngamma, theta);
+  //double ndotww = get_ndotww(ngamma, theta);
+  //double ndotwp = get_ndotwp(ngamma, nprot, theta);
+  //double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
+  //double ndotwf = get_ndotwf(n1, ngamma, theta);
   double ndotee = get_ndotee(nprot, z, theta);
-  double out = ndotee; //+ndotww + ndotwp + ndotwe + ndotwf ;
+  //double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
+  double out = ndotee;
   return out;
 }
 
@@ -303,13 +319,14 @@ inline double ncdot(double ngamma, double theta, double nprot, double z, double 
 
 /* net pair production rate */
 inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size) {
-  double xm = find_xm(zfrac, taut, nprot, theta);
-  double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
-  double y1 = comptony1(xm, taut, theta);
-  double fb = fbrem(y1);
-  double n1 = flatn1(xm, theta, y1);
-  double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
-  double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
+  //double xm = find_xm(zfrac, taut, nprot, theta);
+  //double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
+  //double y1 = comptony1(xm, taut, theta);
+  //double fb = fbrem(y1);
+  //double n1 = flatn1(xm, theta, y1);
+  //double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
+  //double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
+  double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
   double na = nadot(zfrac, nprot, theta);
   return nc - na;
 }
