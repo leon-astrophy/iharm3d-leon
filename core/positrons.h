@@ -16,6 +16,9 @@
 // are we initializing e-p pairs? //
 #define INIT_PAIRS 1
 
+// overwriting MBH and eta_edd? //
+#define OVER_WRITE 1
+
 // thomson scattering cross section in CGS
 #define sigma_t (6.6524587051e-25)
 
@@ -43,10 +46,13 @@
 #define hplanck (6.626196e-27) //planck constant in cgs
 
 // quality factor //
-#define q_alpha (0.3)
+#define q_alpha (0.1)
 
 // bisection threshold //
 #define bisects (1e-6)
+
+// ceiling on tau //
+#define tau_uppper (1e5)
 
 //******************************************************************************
 /* define function here, which are not called globally */
@@ -77,5 +83,7 @@ double get_ndotww(double ngamma, double theta);
 double get_ndotwp(double ngamma, double nprot, double theta);
 double get_ndotwe(double ngamma, double nprot, double z, double theta);
 double get_ndotwf(double n1, double ngamma, double theta);
+double get_zfrac(double nprot, double thetae);
+double get_zfrac_fix_uu(double nprot, double ug, double ggas);
 
 //******************************************************************************

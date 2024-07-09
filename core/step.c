@@ -76,8 +76,10 @@ void step(struct GridGeom *G, struct FluidState *S)
   /* do only if the flag for pair production is on */
 #if POSITRONS
 #if PAIRS
+  timer_start(TIMER_POSITRON);
   pair_production(G, S, Stmp, 0.5*dt);
   FLAG("Pair Production Tmp");
+  timer_stop(TIMER_POSITRON);
 #endif
 #endif 
 
@@ -121,8 +123,10 @@ void step(struct GridGeom *G, struct FluidState *S)
   /* do only if the flag for pair production is on */
 #if POSITRONS
 #if PAIRS
+  timer_start(TIMER_POSITRON);
   pair_production(G, Stmp, S, dt);
   FLAG("Pair Production Tmp");
+  timer_stop(TIMER_POSITRON);
 #endif
 #endif
 
@@ -281,8 +285,10 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
   // we pass only Ss but not Si because the RHS of the ODE dy/dt
   // depends only either the previous step y0 or intermediate y*
   #if COOLING
+    timer_start(TIMER_COOLING);
     rad_cooling(G, Ss, Sf, Dt);
     FLAG("Radiative Cooling Tmp");
+    timer_stop(TIMER_COOLING);
   #endif
 
   //convert from conservative to primitive variables

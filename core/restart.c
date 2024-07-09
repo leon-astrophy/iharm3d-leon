@@ -17,6 +17,9 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
+// positron //
+#include "positrons.h"
+
 // declare variables
 static int restart_id = 0;
 
@@ -113,7 +116,7 @@ void restart_write_backend(struct FluidState *S, int type)
   // Leon's patch, mass unit and black hole mass //
 #if POSITRONS
   hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
-  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&eta_edd, "eta_edd", H5T_IEEE_F64LE);
 #endif 
 
   /*--------------------------------------------------*/
@@ -238,8 +241,11 @@ if (METRIC != MKS) {
 
   // Leon's patch, mass unit and black hole mass //
 #if POSITRONS
+  // However, if we want to over write these values, do not read in //
+#if !OVER_WRITE
   hdf5_read_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
-  hdf5_read_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
+  hdf5_read_single_val(&eta_edd, "eta_edd", H5T_IEEE_F64LE);
+#endif
 #endif
 
 /////////////////////////////////////////////////////////////
@@ -288,7 +294,7 @@ int restart_init(struct GridGeom *G, struct FluidState *S)
   //initialize grids
   set_grid(G);
 
-  // Calculate ucon, ucov, bcon, bcov
+  // Calculate ucon, ucov, bcon, bcov, and conservative variables 
   get_state_vec(G, S, CENT, 0, N3 - 1, 0, N2 - 1, 0, N1 - 1);
   prim_to_flux_vec(G, S, 0, CENT, 0, N3 - 1, 0, N2 - 1, 0, N1 - 1, S->U);
 

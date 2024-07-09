@@ -285,6 +285,15 @@
 #define NUM_TIMERS     (20)
 #endif
 
+/*-----------------------------------*/
+// Leon's patch, extra timers //
+#if POSITRONS || COOLING
+#undef NUM_TIMERS
+#define NUM_TIMERS (30)
+#define TIMER_POSITRON    (29)
+#define TIMER_COOLING    (28)
+#endif
+
 //*******************************************************************************
 //*
 //*    GLOBAL TYPES
@@ -422,7 +431,7 @@ extern double R_isco;
 
 // Leon's patch, unit conversion //
 #if POSITRONS
-extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh; 
+extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh, eta_edd; 
 #endif
 
 /*------------------------------------------------------------*/
@@ -670,7 +679,7 @@ int U_to_P(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int lo
 
 // Leon's patch, positrons.c
 #if POSITRONS
-void set_units();
+void set_units(struct GridGeom *G, struct FluidState *Ss);
 void init_positrons(struct GridGeom *G, struct FluidState *S);
 void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step);
 #endif

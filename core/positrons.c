@@ -19,13 +19,70 @@
 //******************************************************************************
 
 // set the unit convestion between code and cgs // 
-void set_units()
+void set_units(struct GridGeom *G, struct FluidState *Ss)
 {
+  /* black hole mass in cgs */ 
   Mbh = mbh*MSUN;
+
+  /* Length and time scales */
   L_unit = GNEWT*Mbh/(CL*CL);
   T_unit = L_unit/CL;
+
+  /* Eddington luminosity, stolen from GRTRANS:) */
+  double leddval = 4*M_PI*GNEWT*Mbh*MP*CL/sigma_t;
+
+  /* Eddington accretion rate, assume nominal efficiency of 10% */
+  double Mdotedd = leddval/CL/CL/0.1;
+
+  /* target accretion rate in terms of Eddington */
+  /* Here, Mdot is in cgs */
+  double Mdot = eta_edd*Mdotedd;
+
+  /* Mdot measured at the event horizon */
+  /* If the Mdot at event horizon is zero, return errors */
+  double dmdt_horizon = 0.0;
+
+  /* event horizon */
+  double reh = 1 + sqrt(1 - a*a);
+
+  /* find the index for the event horizon */
+  int ind;
+  double rad, theta, X[NDIM];
+  ILOOP {
+    coord(i, 0, 0, CENT, X);
+    bl_coord(X, &rad, &theta);    
+    if(rad >= reh){
+      ind = i;
+      break;
+    }
+  }
+
+#if !INTEL_WORKAROUND
+#pragma omp parallel for reduction(+:dmdt_horizon) collapse(2)
+#endif
+  JSLOOP(0, N2 - 1) {
+    KSLOOP(0, N3 - 1) {
+      /* differential mass accretion rate is -rho*u^r*sqrt(-g)*dtheta*dphi */
+      dmdt_horizon += -Ss->P[RHO][k][j][ind]*Ss->ucon[1][k][j][ind]*G->gdet[CENT][j][ind]*dx[2]*dx[3];
+    }
+  }
+
+  /* determine of the horizon mass accretion rate is zero*/
+  printf("Horizon mass accretion rate is %.12e\n\n", dmdt_horizon);
+  if(dmdt_horizon == 0) {
+    printf("WARNING, the horizon mass accretion rate is zero\n");
+    printf("Will set an arbitary value\n");
+    dmdt_horizon = 0.1;
+    exit(0);
+  }
+
+  /* Mass unit */
+  M_unit = Mdot*T_unit/dmdt_horizon;
+
+  /* Now set the remaining unit */
   RHO_unit = M_unit*pow(L_unit,-3.);
   U_unit = RHO_unit*CL*CL;
+
 }
 
 //******************************************************************************
@@ -34,11 +91,9 @@ void set_units()
 void init_positrons(struct GridGeom *G, struct FluidState *S)
 {
   
+  // Set positron mass to its floor values //
   ZLOOPALL {
-
-    // Set positron mass to its floor values //
     S->P[RPL][k][j][i] = ZMIN*ME_MP*S->P[RHO][k][j][i];
-
   }
 
   // Necessary?  Usually called right afterward
@@ -116,7 +171,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /***********************************************************************/
   
-  // calculate proton and positron //
+  // calculate proton and positron numbe density, all in cgs //
   nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP, npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
 
   // electron by charge neutrality //
@@ -150,7 +205,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   }
 
   // perform the dot product 
-  double norm_gradT = sqrt(dot(gradT_con, gradT));
+  double norm_gradT = sqrt(fabs(dot(gradT_con, gradT)));
 
   /***********************************************************************/
 
@@ -164,120 +219,124 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // dimensionless temperature and postiron fraction //
   double thetae = KBOL*t_c/(ME*CL*CL); 
-  double zfrac = npost/nprot;
+  double zfrac = npost/nprot; 
 
   /***********************************************************************/
   /* now calculate pair production rate */
 
-  //if(!isnan(h_th)) {
+  /* limit the optical depth */
+  if(isnan(tau_depth)) {
+    tau_depth = tau_uppper;
+  } else {
+    tau_depth = fmin(tau_depth, tau_uppper);
+  }
     
-    // net pair production rate, note the rate is in the CGS unit!!! //
-    double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
-    
-    // positron mass production rate, need to convert to code unit!!! //
-    double rhopdot = ME*net_rate*(T_unit/RHO_unit);
+  // net pair production rate, note the rate is in the CGS unit!!! //
+  double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
+  
+  /* do these steps only if the production rate is non-zero */
+  if(fabs(net_rate) > 0) {    
+    //printf("Before %.12e\n",npost);
 
-    /* do these steps only if the production rate is non-zero */
-    if(fabs(rhopdot) > 0) {    
+    // quality factor //
+    double qfac = fabs(npost/net_rate);
 
-      // quality factor //
-      double qfac = fabs(Ss->P[RPL][k][j][i]/rhopdot);
+    /* if the source term is too steep, implement implicit solver */
+    /* Crank-Nicolson method, inspired by Lia's thesis */
+    /* Basically a root finding, so use bisection mtehod */
+    double dummy;
+    if(dt_step > q_alpha*qfac) {
 
-      /* if the source term is too steep, implement implicit solver */
-      /* Crank-Nicolson method, inspired by Lia's thesis */
-      /* Basically a root finding, so use bisection mtehod */
-      double dummy;
-      if(dt_step > q_alpha*qfac) {
+      /* print out */
+      //printf("net_rate too steep %d %d %d\n", i, j, k);
 
-        printf("mdot too steep %d %d %d\n", i, j, k);
+      /* left state */
+      double zl = zfrac;
+      double tl = t_c/(zl + 1)*(zfrac + 1);
+      double h_l = h_th*tl/t_c;
+      double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
+      double theta_l = thetae*tl/t_c;
+      double ndotl = ndot_net(zl, taul, nprot, theta_l, h_l);
+      double fl = (zl - zfrac) - dt_step*ndotl/nprot;
 
-        /* left state */
-        double zl = zfrac;
-        double tl = t_c/(zl + 1)*(zfrac + 1);
-        double h_l = h_th*tl/t_c;
-        double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
-        double theta_l = thetae*tl/t_c;
-        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zl, taul, nprot, theta_l, h_l);
-        double fl = (zl - zfrac) - 0.5*dt_step*dummy/nprot;
-
-        /* right state */
-        double zr = 1.0;
-        double tr = t_c/(zr + 1)*(zfrac + 1);
-        double h_r = h_th*tr/t_c;
-        double taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
-        double theta_r = thetae*tr/t_c;
-        dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
-        double fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
-
-        /* if the right state guess is too poor, scale it up by 100 */
-        if(fr*fl > 0) {
-          zr = 100;
-          tr = t_c/(zr + 1)*(zfrac + 1);
-          h_r = h_th*tr/t_c;
-          taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
-          theta_r = thetae*tr/t_c;
-          dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zr, taur, nprot, theta_r, h_r);
-          fr = (zr - zfrac) - 0.5*dt_step*dummy/nprot;
-          if(fr*fl > 0) {
-            printf("invalid guess in zfrac\n");
-            exit(0);
-          }
-        }
-
-        /* define the center state */
-        double zc, tc, h_c, tauc,theta_c, fc, zc_old;
-
-        /* bisection method counting */
-        int count;
-
-        /* now iterate until converges */
-        for (count = 0; count < 99999; count++) {
-
-          /* backup */
-          if(count > 0) {
-            zc_old = zc;
-          }
-
-          /* center state */
-          zc = 0.5*(zl + zr);
-          tc = t_c/(zc + 1)*(zfrac + 1);
-          h_c = h_th*tc/t_c;
-          tauc = 2.0*(2*zc + 1)*nprot*sigma_t*h_c;
-          theta_c = thetae*tc/t_c;
-          dummy = ndot_net(zfrac, tau_depth, nprot, thetae, h_th) + ndot_net(zc, tauc, nprot, theta_c, h_c);
-          fc = (zc - zfrac) - 0.5*dt_step*dummy/nprot;
-
-          /* check the sign */
-          if (fl*fc > 0) {
-            zl = zc;
-          } else if (fr*fc > 0) {
-            zr = zc;
-          }
-
-          /* determine if need to exit */
-          if(count > 0) {
-            if(fabs(1.0 - zc_old/zc) < bisects) {
-              break;
-            }
-          }
-        }
-        if(count == 99999) {
-          printf("No solution\n");
-          exit(0);
-        }
-
-        /* assign new positron mass, remember to convert back to code unit !!! */
-        Sf->P[RPL][k][j][i] = zc*nprot*ME/RHO_unit;
-        
-      /* otherwise, march forward by time */
-      } else {
-
-        Sf->P[RPL][k][j][i] += rhopdot*dt_step;
-
+      /* right state */
+      int o;
+      double zr, tr, h_r, taur, theta_r, ndotr, fr;
+      zr = zl;
+      for (o = 0; o < 999; o++) {
+        tr = t_c/(zr + 1)*(zfrac + 1);
+        h_r = h_th*tr/t_c;
+        taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+        theta_r = thetae*tr/t_c;
+        ndotr = ndot_net(zr, taur, nprot, theta_r, h_r);
+        fr = (zr - zfrac) - dt_step*ndotr/nprot;
+        if(fr*fl <0) break;
+        zr = zr*10;
       }
 
+      if(o == 999 || isnan(fr)) {
+        printf("Failure in implicit method\n");
+        exit(0);
+      }
+
+      /* define the center state */
+      double zcen, tcen, h_cen, taucen, theta_cen, ndotcen, fcen, zcen_old;
+
+      /* bisection method counting */
+      int count;
+
+      /* now iterate until converges */
+      for (count = 0; count < 99999; count++) {
+
+        /* backup */
+        if(count > 0) {
+          zcen_old = zcen;
+        }
+
+        /* center state */
+        zcen = 0.5*(zl + zr);
+        tcen = t_c/(zcen + 1)*(zfrac + 1);
+        h_cen = h_th*tcen/t_c;
+        taucen = 2.0*(2*zcen + 1)*nprot*sigma_t*h_cen;
+        theta_cen = thetae*tcen/t_c;
+        ndotcen = ndot_net(zcen, taucen, nprot, theta_cen, h_cen);
+        fcen = (zcen - zfrac) - dt_step*ndotcen/nprot;
+        
+        /* check the sign */
+        if (fl*fcen > 0) {
+          zl = zcen;
+        } else if (fr*fcen > 0) {
+          zr = zcen;
+        }
+
+        /* determine if need to exit */
+        if(count > 0) {
+          if(fabs(1.0 - zcen_old/zcen) < bisects) {
+            break;
+          }
+        }
+      }
+
+      if(count == 99999) {
+        printf("No solution\n");
+        exit(0);
+      }
+
+      /* assign new positron mass, remember to convert back to code unit !!! */
+      npost = zcen*nprot;
+      
+    /* otherwise, march forward by time */
+    } else {
+
+      // positron mass production rate, need to convert to code unit!!! //
+      npost = npost + net_rate*dt_step;
+
     }
-  
+
+    // update positron mass //
+    Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
+    //printf("After %.12e\n",npost);
+  }
 }
 
 //******************************************************************************
@@ -308,13 +367,13 @@ inline double get_ndotee(double nprot, double z, double theta) {
 
 /* pair production rate due to photon-photon or photon-particle collision */
 inline double ncdot(double ngamma, double theta, double nprot, double z, double n1, double fb, double ndotbr) {
-  //double ndotww = get_ndotww(ngamma, theta);
-  //double ndotwp = get_ndotwp(ngamma, nprot, theta);
-  //double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
-  //double ndotwf = get_ndotwf(n1, ngamma, theta);
+  double ndotww = get_ndotww(ngamma, theta);
+  double ndotwp = get_ndotwp(ngamma, nprot, theta);
+  double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
+  double ndotwf = get_ndotwf(n1, ngamma, theta);
   double ndotee = get_ndotee(nprot, z, theta);
-  //double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
-  double out = ndotee;
+  double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
+  //double out = ndotee;
   return out;
 }
 
@@ -322,14 +381,14 @@ inline double ncdot(double ngamma, double theta, double nprot, double z, double 
 
 /* net pair production rate */
 inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size) {
-  //double xm = find_xm(zfrac, taut, nprot, theta);
-  //double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
-  //double y1 = comptony1(xm, taut, theta);
-  //double fb = fbrem(y1);
-  //double n1 = flatn1(xm, theta, y1);
-  //double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
-  //double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
-  double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
+  double xm = find_xm(zfrac, taut, nprot, theta);
+  double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
+  double y1 = comptony1(xm, taut, theta);
+  double fb = fbrem(y1);
+  double n1 = flatn1(xm, theta, y1);
+  double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
+  double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
+  //double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
   double na = nadot(zfrac, nprot, theta);
   return nc - na;
 }
@@ -606,6 +665,17 @@ inline double get_ndotwf(double n1, double ngamma, double theta) {
   double out;
   out = CL*RE*RE*n1*ngamma*M_PI*M_PI/4.0*exp(-1.0/theta);
   return out;
+}
+
+//******************************************************************************
+
+/* positron fractions assuming local thermal equilibrium */
+inline double get_zfrac(double nprot, double thetae) {
+  double kt = thetae*ME*CL*CL;
+  double lam_th = hplanck/sqrt(2*M_PI*ME*kt);
+  double u = 4/nprot/nprot/pow(lam_th,6)*exp(-2/thetae);
+  double zfrac = 0.5*(-1+sqrt(1+4*u));
+  return zfrac;
 }
 
 //******************************************************************************

@@ -138,9 +138,12 @@ distclean: clean
 	@echo "Cleaning config files..."
 	@rm -rf build_archive
 
-cleanfile: 
-	@echo "Cleaning output files..."
+cleandump: 
+	@echo "Cleaning dump files..."
 	@rm -rf dumps
+
+cleanrest:
+	@echo "Cleaning restart files..."
 	@rm -rf restarts
 
 archive-invalidation: distclean

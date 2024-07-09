@@ -8,6 +8,7 @@
 
 //include header files
 #include "decs.h"
+#include "positrons.h"
 
 //declare variables
 static double timers[NUM_TIMERS];
@@ -106,6 +107,14 @@ void report_performance()
       times[TIMER_ELECTRON_FIXUP]/steps,
       100.*times[TIMER_ELECTRON_FIXUP]/times[TIMER_ALL]);
 #endif
+#if COOLING
+    fprintf(stdout, "   COOLING:     %8.4g s (%.4g %%)\n",
+      times[TIMER_COOLING]/steps, 100.*times[TIMER_COOLING]/times[TIMER_ALL]);
+#endif
+#if PAIRS
+    fprintf(stdout, "   PAIRS:     %8.4g s (%.4g %%)\n",
+      times[TIMER_POSITRON]/steps, 100.*times[TIMER_POSITRON]/times[TIMER_ALL]);
+#endif 
 #endif
 
     // overall performances

@@ -59,4 +59,4 @@
 #define POSITRONS 1
 
 // Leon's patch, include radiative cooling? //
-#define COOLING 0 
+#define COOLING 1 

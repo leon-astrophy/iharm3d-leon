@@ -128,10 +128,13 @@ int main(int argc, char *argv[])
   init_cooling(G);
 #endif  
 
-  // Leon's patch, set units //
+  // Leon's patch, positron related //
 #if POSITRONS
-  set_units();
-  // Leon's patch, initialize positrons //
+#if PAIRS
+  // Leon's patch, set units only if we are doing pair productions //
+  set_units(G,S);
+#endif
+  // Leon's patch, initialize positrons even if we do not do pair productions //
 #if INIT_PAIRS
   init_positrons(G,S);
 #endif

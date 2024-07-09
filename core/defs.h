@@ -82,7 +82,7 @@ double R_isco;
 
 // Leon's patch, unit conversion //
 #if POSITRONS
-double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh; 
+double Mbh, L_unit, T_unit, RHO_unit, U_unit, M_unit, mbh, eta_edd; 
 #endif
 
 /*----------------------------------------*/
