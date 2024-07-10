@@ -20,7 +20,7 @@
 #define h_r (0.1)
 
 // control the cooling time scale 
-#define q_alpha (0.1)
+#define q_alpha (0.3)
 
 // which cooling? //
 #define NOBLE 1

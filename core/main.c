@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     //report code efficiencies
     if (nstep % DTp == 0)
       report_performance();
-
+//t = tf;
   }
   
 //*******************************************************************************

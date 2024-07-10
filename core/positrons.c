@@ -236,7 +236,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   
   /* do these steps only if the production rate is non-zero */
   if(fabs(net_rate) > 0) {    
-    //printf("Before %.12e\n",npost);
 
     // quality factor //
     double qfac = fabs(npost/net_rate);
@@ -244,7 +243,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     /* if the source term is too steep, implement implicit solver */
     /* Crank-Nicolson method, inspired by Lia's thesis */
     /* Basically a root finding, so use bisection mtehod */
-    double dummy;
     if(dt_step > q_alpha*qfac) {
 
       /* print out */
@@ -261,7 +259,12 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
       /* right state */
       int o;
-      double zr, tr, h_r, taur, theta_r, ndotr, fr;
+      double zr, tr, h_r, taur, theta_r, ndotr, fr, steps;
+      if(net_rate > 0) {
+        steps = 10;
+      } else{
+        steps = 0.1;
+      }
       zr = zl;
       for (o = 0; o < 999; o++) {
         tr = t_c/(zr + 1)*(zfrac + 1);
@@ -271,7 +274,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         ndotr = ndot_net(zr, taur, nprot, theta_r, h_r);
         fr = (zr - zfrac) - dt_step*ndotr/nprot;
         if(fr*fl <0) break;
-        zr = zr*10;
+        zr = zr*steps;
       }
 
       if(o == 999 || isnan(fr)) {
@@ -317,6 +320,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         }
       }
 
+      /* exit if no solution, and print out error */
       if(count == 99999) {
         printf("No solution\n");
         exit(0);
@@ -335,15 +339,45 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
     // update positron mass //
     Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
-    //printf("After %.12e\n",npost);
+
   }
+}
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// Now, the remaining of the code are all about computing pair production rates
+// I use a long comment to seperate out the main body of the this code for 
+// better documentation and reading
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//******************************************************************************
+
+/* net pair production rate */
+inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size) {
+  double xm = find_xm(zfrac, taut, nprot, theta);
+  double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
+  double y1 = comptony1(xm, taut, theta);
+  double fb = fbrem(y1);
+  double n1 = flatn1(xm, theta, y1);
+  double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
+  double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
+  //double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
+  double na = nadot(zfrac, nprot, theta);
+  return nc - na;
 }
 
 //******************************************************************************
 
-// functions for computing function g(theta) in pair annhilation rates //
-inline double nadot(double z, double nprot, double theta) {
-  double out = (3.0/8.0)*sigma_t*CL*(nprot*nprot*z*(z+1.0))/(1.0+2.0*theta*theta/log(1.12*theta+1.3));
+/* Total pair production rate due to photon-photo, photon-particle collision */
+inline double ncdot(double ngamma, double theta, double nprot, double z, double n1, double fb, double ndotbr) {
+  double ndotww = get_ndotww(ngamma, theta);
+  double ndotwp = get_ndotwp(ngamma, nprot, theta);
+  double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
+  double ndotwf = get_ndotwf(n1, ngamma, theta);
+  double ndotee = get_ndotee(nprot, z, theta);
+  double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
+  //double out = ndotee;
   return out;
 }
 
@@ -365,83 +399,76 @@ inline double get_ndotee(double nprot, double z, double theta) {
 
 //******************************************************************************
 
-/* pair production rate due to photon-photon or photon-particle collision */
-inline double ncdot(double ngamma, double theta, double nprot, double z, double n1, double fb, double ndotbr) {
-  double ndotww = get_ndotww(ngamma, theta);
-  double ndotwp = get_ndotwp(ngamma, nprot, theta);
-  double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
-  double ndotwf = get_ndotwf(n1, ngamma, theta);
-  double ndotee = get_ndotee(nprot, z, theta);
-  double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
-  //double out = ndotee;
+/* This is for computing the pair annhilation rate */
+inline double nadot(double z, double nprot, double theta) {
+  double out = (3.0/8.0)*sigma_t*CL*(nprot*nprot*z*(z+1.0))/(1.0+2.0*theta*theta/log(1.12*theta+1.3));
+  return out;
+}
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections are the analytic formula for computing photon-photon or photon-particle processes
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//******************************************************************************
+
+/* wein - wein, Svensson 1984, White & Lightman 1989 */
+inline double get_ndotww(double ngamma, double theta) {
+  double out;
+  if(theta <= 1.0) {
+    out = (0.125)*M_PI*M_PI*exp(-2.0/theta)*(1.0 + 2.88*pow(theta,0.934))/pow(theta,3);
+  } else {
+    out = (0.5)*M_PI*log(2.0*eta*theta + 0.38)/pow(theta,2);
+  }
+  out = out*CL*RE*RE*ngamma*ngamma;
   return out;
 }
 
 //******************************************************************************
 
-/* net pair production rate */
-inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size) {
-  double xm = find_xm(zfrac, taut, nprot, theta);
-  double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
-  double y1 = comptony1(xm, taut, theta);
-  double fb = fbrem(y1);
-  double n1 = flatn1(xm, theta, y1);
-  double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
-  double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
-  //double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
-  double na = nadot(zfrac, nprot, theta);
-  return nc - na;
+/* wein - proton, Svensson 1984, White & Lightman 1989 */
+inline double get_ndotwp(double ngamma, double nprot, double theta) {
+  double out;
+  if(theta <= 2.0) {
+    out = M_PI*theta*exp(-2.0/theta)/(1.0 + 0.9*theta);
+  } else {
+    out = (28.0/9.0)*log(2.0*eta*theta + 1.7) - 92.0/27.0;
+  }
+  out = out*alphaf*CL*RE*RE*ngamma*nprot;
+  return out;
 }
 
 //******************************************************************************
 
-// find photon frequency below witch the local spectrum is black body //
-inline double find_xm(double z, double tau, double nprot, double theta) {
-    
-  /* backup */
-  double xc_old;
-
-  /* set the LHS of the root */
-  double at = (2*z+1)*nprot*sigma_t;
-  double lhs = at*(1+zeta*(tau*tau)*fmin(1,8*theta))/(tau*(1+zeta*tau));
-    
-  /* initial guess */
-  double xl = -50, xr = log10(700);
-  double xlp = pow(10.0, xl)*theta, xrp = pow(10.0, xr)*theta;
-  double fl = brem_abs(xlp, z, nprot, theta) - lhs;
-  double fr = brem_abs(xrp, z, nprot, theta) - lhs;
-  double xc = 0.5*(xl+xr), xcp = pow(10.0, xc)*theta;
-   
-  /* poor initial guess, exit */
-  if(fl*fr > 0) {
-    printf("poor initial guess xm");
-    exit(0);
+/* wein - lepton, Svensson 1984, White & Lightman 1989 */
+inline double get_ndotwe(double ngamma, double nprot, double z, double theta) {
+  double out;
+  if(theta <= 0.18) {
+    out = (4.0*M_PI/27.0)*exp(-2.0/theta)*(1.0 + 27.1*pow(theta,0.949));
+  } else if(theta >= 2) {
+    out = (56.0/9.0*log(2.0*eta*theta) - 8.0/27.0)/(1.0 + 0.5/theta);
+  } else {
+    out = (4.0*M_PI/27.0)*exp(-2.0/theta)*16.1*pow(theta,0.541);
   }
-
-  /* continue */
-  double fc = brem_abs(xcp, z, nprot, theta) - lhs;
-
-  /* main loop */
-  int n; 
-  for (n = 0; n < 99999; n++) {
-    xc_old = xc;
-    if(fc*fl > 0) {
-      fl = fc, xl = xc;
-    } else if(fc*fr > 0){
-      fr = fc, xr = xc;
-    }
-    xc = 0.5*(xl+xr), xcp = pow(10.0, xc)*theta;
-    fc = brem_abs(xcp, z, nprot, theta) - lhs;
-    if(fabs(1.0 - xc/xc_old) < bisects) break;
-  }
-  if(n == 99999) {
-    printf("no solution in xm");
-    exit(0);
-  }
-
-  /* return */
-  return xcp;
+  out = out*alphaf*CL*RE*RE*ngamma*(2.0*z+1.0)*nprot;
+  return out;
 }
+
+//******************************************************************************
+
+/* wein - flat, Svensson 1984, White & Lightman 1989 */
+inline double get_ndotwf(double n1, double ngamma, double theta) {
+  double out;
+  out = CL*RE*RE*n1*ngamma*M_PI*M_PI/4.0*exp(-1.0/theta);
+  return out;
+}
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections are the analytic formula for computing total photon emissivity
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //******************************************************************************
 
@@ -503,6 +530,12 @@ inline double get_ndotbr(double z, double theta, double xm, double nprot) {
   double out = factor*(ep + ee + pm);
   return out;
 }
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections are the analytic formula for computing photon emissivity per frequency
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //******************************************************************************
 
@@ -571,6 +604,62 @@ inline double brem_abs(double x, double z, double nprot, double theta) {
   return out;
 }
 
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections related to the "radiative transfer"
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//******************************************************************************
+
+// find photon frequency below witch the local spectrum is black body //
+inline double find_xm(double z, double tau, double nprot, double theta) {
+    
+  /* backup */
+  double xc_old;
+
+  /* set the LHS of the root */
+  double at = (2*z+1)*nprot*sigma_t;
+  double lhs = at*(1+zeta*(tau*tau)*fmin(1,8*theta))/(tau*(1+zeta*tau));
+    
+  /* initial guess */
+  double xl = -50, xr = log10(700);
+  double xlp = pow(10.0, xl)*theta, xrp = pow(10.0, xr)*theta;
+  double fl = brem_abs(xlp, z, nprot, theta) - lhs;
+  double fr = brem_abs(xrp, z, nprot, theta) - lhs;
+  double xc = 0.5*(xl+xr), xcp = pow(10.0, xc)*theta;
+   
+  /* poor initial guess, exit */
+  if(fl*fr > 0) {
+    printf("poor initial guess xm");
+    exit(0);
+  }
+
+  /* continue */
+  double fc = brem_abs(xcp, z, nprot, theta) - lhs;
+
+  /* main loop */
+  int n; 
+  for (n = 0; n < 99999; n++) {
+    xc_old = xc;
+    if(fc*fl > 0) {
+      fl = fc, xl = xc;
+    } else if(fc*fr > 0){
+      fr = fc, xr = xc;
+    }
+    xc = 0.5*(xl+xr), xcp = pow(10.0, xc)*theta;
+    fc = brem_abs(xcp, z, nprot, theta) - lhs;
+    if(fabs(1.0 - xc/xc_old) < bisects) break;
+  }
+  if(n == 99999) {
+    printf("no solution in xm");
+    exit(0);
+  }
+
+  /* return */
+  return xcp;
+}
+
 //******************************************************************************
 
 /* fraction of up-scattered bremsstrahlung photon */
@@ -612,59 +701,6 @@ inline double ngamma(double xm, double tau, double theta, double y1, double z, d
   }
   double ng = r_size/CL*(1.0 + zeta*gt*tau)*fb*ndotbr;
   return ng;
-}
-
-//******************************************************************************
-
-/* wein - wein, Svensson 1984, White & Lightman 1989 */
-inline double get_ndotww(double ngamma, double theta) {
-  double out;
-  if(theta <= 1.0) {
-    out = (0.125)*M_PI*M_PI*exp(-2.0/theta)*(1.0 + 2.88*pow(theta,0.934))/pow(theta,3);
-  } else {
-    out = (0.5)*M_PI*log(2.0*eta*theta + 0.38)/pow(theta,2);
-  }
-  out = out*CL*RE*RE*ngamma*ngamma;
-  return out;
-}
-
-//******************************************************************************
-
-/* wein - proton, Svensson 1984, White & Lightman 1989 */
-inline double get_ndotwp(double ngamma, double nprot, double theta) {
-  double out;
-  if(theta <= 2.0) {
-    out = M_PI*theta*exp(-2.0/theta)/(1.0 + 0.9*theta);
-  } else {
-    out = (28.0/9.0)*log(2.0*eta*theta + 1.7) - 92.0/27.0;
-  }
-  out = out*alphaf*CL*RE*RE*ngamma*nprot;
-  return out;
-}
-
-//******************************************************************************
-
-/* wein - lepton, Svensson 1984, White & Lightman 1989 */
-inline double get_ndotwe(double ngamma, double nprot, double z, double theta) {
-  double out;
-  if(theta <= 0.18) {
-    out = (4.0*M_PI/27.0)*exp(-2.0/theta)*(1.0 + 27.1*pow(theta,0.949));
-  } else if(theta >= 2) {
-    out = (56.0/9.0*log(2.0*eta*theta) - 8.0/27.0)/(1.0 + 0.5/theta);
-  } else {
-    out = (4.0*M_PI/27.0)*exp(-2.0/theta)*16.1*pow(theta,0.541);
-  }
-  out = out*alphaf*CL*RE*RE*ngamma*(2.0*z+1.0)*nprot;
-  return out;
-}
-
-//******************************************************************************
-
-/* wein - flat, Svensson 1984, White & Lightman 1989 */
-inline double get_ndotwf(double n1, double ngamma, double theta) {
-  double out;
-  out = CL*RE*RE*n1*ngamma*M_PI*M_PI/4.0*exp(-1.0/theta);
-  return out;
 }
 
 //******************************************************************************
