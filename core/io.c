@@ -208,7 +208,6 @@ void dump_backend(struct GridGeom *G, struct FluidState *S, int type)
   // Leon's patch, mass unit and black hole mass //
   hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
   hdf5_write_single_val(&eta_edd, "eta_edd", H5T_IEEE_F64LE);
-  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
 
   //Geometry
   hdf5_make_directory("geom");

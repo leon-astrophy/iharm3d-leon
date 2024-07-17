@@ -74,14 +74,12 @@ void step(struct GridGeom *G, struct FluidState *S)
 
   // Leon's patch, pair production
   /* do only if the flag for pair production is on */
-#if POSITRONS
-#if PAIRS
+#if POSITRONS && PAIRS
   timer_start(TIMER_POSITRON);
   pair_production(G, S, Stmp, 0.5*dt);
   FLAG("Pair Production Tmp");
   timer_stop(TIMER_POSITRON);
 #endif
-#endif 
 
   // Set floor values to primitive variables 
   fixup(G, Stmp);
@@ -121,13 +119,11 @@ void step(struct GridGeom *G, struct FluidState *S)
 
   // Leon's patch, pair production
   /* do only if the flag for pair production is on */
-#if POSITRONS
-#if PAIRS
+#if POSITRONS && PAIRS
   timer_start(TIMER_POSITRON);
   pair_production(G, Stmp, S, dt);
   FLAG("Pair Production Tmp");
   timer_stop(TIMER_POSITRON);
-#endif
 #endif
 
   // Set floor values to primitive variables 

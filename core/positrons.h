@@ -10,7 +10,7 @@
 #pragma once
 #include "decs.h"
 
-// do we calculate e-p pairs? //
+// do we calculate e-p pair production? //
 #define PAIRS 1
 
 // are we initializing e-p pairs? //
@@ -19,13 +19,20 @@
 // overwriting MBH and eta_edd? //
 #define OVER_WRITE 1
 
-// thomson scattering cross section in CGS
-#define sigma_t (6.6524587051e-25)
+//******************************************************************************
 
 // Leon's patch, fixup parameters for positron //
 #define RPLMINLIMIT (1.e-30)
 #define RPLMIN  (1.e-16)
 #define ZMIN (1.e-10)
+
+// quality factor //
+#define q_alpha (0.1)
+
+// bisection threshold //
+#define bisects (1e-6)
+
+//******************************************************************************
 
 // Leon's patch, these are all physical untis //
 #define ME (9.1093826e-28  ) // Electron mass
@@ -37,6 +44,7 @@
 #define ME_MP (0.0005446170214888188) //ratio of electron to proton mass
 
 // Leon's patch, important constants for pair production //
+#define sigma_t (6.6524587051e-25) // thomson cross section
 #define zeta (1.0) // geometric factor
 #define eta (0.56145948356) // exp(-euler) 
 #define lambda_c (2.42631023867e-10) // compton wavelength in cm
@@ -44,15 +52,6 @@
 #define RE (2.8179403262e-13) // classical eletron radius 
 #define sqrt2 (1.41421356237) // square root of 2
 #define hplanck (6.626196e-27) //planck constant in cgs
-
-// quality factor //
-#define q_alpha (0.1)
-
-// bisection threshold //
-#define bisects (1e-6)
-
-// ceiling on tau //
-#define tau_uppper (1e5)
 
 //******************************************************************************
 /* define function here, which are not called globally */

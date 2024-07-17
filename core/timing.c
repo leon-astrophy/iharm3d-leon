@@ -111,7 +111,7 @@ void report_performance()
     fprintf(stdout, "   COOLING:     %8.4g s (%.4g %%)\n",
       times[TIMER_COOLING]/steps, 100.*times[TIMER_COOLING]/times[TIMER_ALL]);
 #endif
-#if PAIRS
+#if POSITRONS && PAIRS
     fprintf(stdout, "   PAIRS:     %8.4g s (%.4g %%)\n",
       times[TIMER_POSITRON]/steps, 100.*times[TIMER_POSITRON]/times[TIMER_ALL]);
 #endif 

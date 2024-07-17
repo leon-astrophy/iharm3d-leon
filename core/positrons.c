@@ -67,13 +67,18 @@ void set_units(struct GridGeom *G, struct FluidState *Ss)
     }
   }
 
+  /* mpi reduce */
+  dmdt_horizon = mpi_reduce(dmdt_horizon);
+
   /* determine of the horizon mass accretion rate is zero*/
-  printf("Horizon mass accretion rate is %.12e\n\n", dmdt_horizon);
+  if(mpi_io_proc()) printf("Horizon mass accretion rate is %.12e\n\n", dmdt_horizon);
   if(dmdt_horizon == 0) {
-    printf("WARNING, the horizon mass accretion rate is zero\n");
-    printf("Will set an arbitary value\n");
+    if(mpi_io_proc()) {
+      printf("WARNING, the horizon mass accretion rate is zero\n");
+      printf("Will set an arbitary value\n");
+    }
     dmdt_horizon = 0.1;
-    exit(0);
+    return;
   }
 
   /* Mass unit */
@@ -152,6 +157,9 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /***********************************************************************/
   // number density, all in c.g.s unit //
 
+  // time step in second !
+  double dt_real = dt_step*T_unit;
+
   // nprot - proton, npost - prositron, nelec - electron //
   double nprot, npost, nelec, ntot;
 
@@ -226,11 +234,10 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /* limit the optical depth */
   if(isnan(tau_depth)) {
-    tau_depth = tau_uppper;
-  } else {
-    tau_depth = fmin(tau_depth, tau_uppper);
+    if(mpi_io_proc()) printf("Diverging optical depth\n");
+    return;
   }
-    
+
   // net pair production rate, note the rate is in the CGS unit!!! //
   double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
   
@@ -243,10 +250,10 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     /* if the source term is too steep, implement implicit solver */
     /* Crank-Nicolson method, inspired by Lia's thesis */
     /* Basically a root finding, so use bisection mtehod */
-    if(dt_step > q_alpha*qfac) {
+    if(dt_real > q_alpha*qfac) {
 
       /* print out */
-      //printf("net_rate too steep %d %d %d\n", i, j, k);
+      if(mpi_io_proc()) printf("net_rate too steep %d %d %d\n", i, j, k);
 
       /* left state */
       double zl = zfrac;
@@ -255,7 +262,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
       double theta_l = thetae*tl/t_c;
       double ndotl = ndot_net(zl, taul, nprot, theta_l, h_l);
-      double fl = (zl - zfrac) - dt_step*ndotl/nprot;
+      double fl = (zl - zfrac) - dt_real*ndotl/nprot;
 
       /* right state */
       int o;
@@ -272,14 +279,14 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
         theta_r = thetae*tr/t_c;
         ndotr = ndot_net(zr, taur, nprot, theta_r, h_r);
-        fr = (zr - zfrac) - dt_step*ndotr/nprot;
+        fr = (zr - zfrac) - dt_real*ndotr/nprot;
         if(fr*fl <0) break;
         zr = zr*steps;
       }
 
       if(o == 999 || isnan(fr)) {
-        printf("Failure in implicit method\n");
-        exit(0);
+        if(mpi_io_proc()) printf("Failure in implicit method\n");
+        return;
       }
 
       /* define the center state */
@@ -303,7 +310,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         taucen = 2.0*(2*zcen + 1)*nprot*sigma_t*h_cen;
         theta_cen = thetae*tcen/t_c;
         ndotcen = ndot_net(zcen, taucen, nprot, theta_cen, h_cen);
-        fcen = (zcen - zfrac) - dt_step*ndotcen/nprot;
+        fcen = (zcen - zfrac) - dt_real*ndotcen/nprot;
         
         /* check the sign */
         if (fl*fcen > 0) {
@@ -322,8 +329,8 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
       /* exit if no solution, and print out error */
       if(count == 99999) {
-        printf("No solution\n");
-        exit(0);
+        if(mpi_io_proc()) printf("No solution\n");
+        return;
       }
 
       /* assign new positron mass, remember to convert back to code unit !!! */
@@ -333,7 +340,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     } else {
 
       // positron mass production rate, need to convert to code unit!!! //
-      npost = npost + net_rate*dt_step;
+      npost = npost + net_rate*dt_real;
 
     }
 
@@ -362,7 +369,6 @@ inline double ndot_net(double zfrac, double taut, double nprot, double theta, do
   double n1 = flatn1(xm, theta, y1);
   double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
   double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
-  //double nc = ncdot(1.0, theta, nprot, zfrac, 1.0, 1.0, 1.0); 
   double na = nadot(zfrac, nprot, theta);
   return nc - na;
 }
@@ -377,7 +383,6 @@ inline double ncdot(double ngamma, double theta, double nprot, double z, double 
   double ndotwf = get_ndotwf(n1, ngamma, theta);
   double ndotee = get_ndotee(nprot, z, theta);
   double out = ndotee + ndotww + ndotwp + ndotwe + ndotwf ;
-  //double out = ndotee;
   return out;
 }
 
@@ -631,7 +636,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
    
   /* poor initial guess, exit */
   if(fl*fr > 0) {
-    printf("poor initial guess xm");
+    if(mpi_io_proc()) printf("poor initial guess xm");
     exit(0);
   }
 
@@ -652,7 +657,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
     if(fabs(1.0 - xc/xc_old) < bisects) break;
   }
   if(n == 99999) {
-    printf("no solution in xm");
+    if(mpi_io_proc()) printf("no solution in xm");
     exit(0);
   }
 
@@ -697,11 +702,17 @@ inline double ngamma(double xm, double tau, double theta, double y1, double z, d
   if(theta < 1.0) {
     gt = 1.0/(1.0 + 5.0*theta + 0.4*theta*theta);
   } else {
-    gt = (3.0/16.0)*(log(2.0*eta*theta)+0.75)/(1.0+(0.1/theta))/(theta*theta);
+    gt = (0.1875)*(log(2.0*eta*theta)+0.75)/(1.0+(0.1/theta))/(theta*theta);
   }
   double ng = r_size/CL*(1.0 + zeta*gt*tau)*fb*ndotbr;
   return ng;
 }
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections are miscellaneous
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //******************************************************************************
 
