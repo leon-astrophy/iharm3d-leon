@@ -370,9 +370,6 @@ extern GridPrim preserve_dU;
 /*------------------------------------------------------------*/
 
 // Leon's patch, extra variables for cooling/pair productions //
-#if POSITRONS
-  extern GridDouble temp; // plasma temperature
-#endif
 #ifdef COOLING
   extern GridDouble omg_gr; // angular velocity 
 #endif

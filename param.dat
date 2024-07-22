@@ -2,7 +2,7 @@
 
 # Leon's patch, black hole mass (in solar mass) #
 # Also the fraction of Eddington limit #
-[dbl] eta_edd = 1e-6
+[dbl] eta_edd = 1e-5
 [dbl] mbh = 10
 
 # COORDINATES: finaltime, dt, and outer boundaries

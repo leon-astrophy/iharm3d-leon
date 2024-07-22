@@ -112,13 +112,6 @@ void init_positrons(struct GridGeom *G, struct FluidState *S)
 void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, double dt_step)
 {
 
-  /* First, calculate the plasma temperature */
-  /* Need temperature at the ghost zone! */
- #pragma omp parallel for collapse(3)
-  ZLOOPALL {
-    find_temp_1zone(G, Ss, i, j, k);
-  }
-
   /* Then, compute the pair production rate */
 #pragma omp parallel for collapse(3)
   ZLOOP {
@@ -129,30 +122,18 @@ void pair_production(struct GridGeom *G, struct FluidState *Ss, struct FluidStat
 
 //******************************************************************************
 
-// compute temperature per grid cells //
-inline void find_temp_1zone(struct GridGeom *G, struct FluidState *Ss, int i, int j, int k)
-{
-
-  // number density, all in c.g.s unit //
-  // nprot - proton, npost - prositron, nelec - electron //
-  double nprot, npost, nelec, ntot;
-
-  // calculate proton and positron //
-  nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP, npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
-
-  // electron by charge neutrality //
-  nelec = nprot + npost, ntot = nelec + nprot + npost;
-
-  // temperature at i,j,k //
-  temp[k][j][i] = Ss->P[UU][k][j][i]*U_unit*(gam - 1.)/(ntot*KBOL); 
-
-}
-
-//******************************************************************************
-
 // compute pair production rate per grid cells //
 inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, struct FluidState *Sf, int i, int j, int k , double dt_step)
 {
+
+  /***********************************************************************/
+
+  // coordinate //
+  double rad, theta, X[NDIM];
+
+  // coordinate radius //
+  coord(i, j, k, CENT, X);
+  bl_coord(X, &rad, &theta);
 
   /***********************************************************************/
   // number density, all in c.g.s unit //
@@ -165,106 +146,98 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /***********************************************************************/
   
-  // temperature at i-1,j,k and i+1,j,k //
-  double tm1_x = temp[k][j][i-1], tp1_x= temp[k][j][i+1];
-
-  // temperature at i,j-1,k and i,j+1,k//
-  double tm1_y= temp[k][j-1][i], tp1_y= temp[k][j+1][i];
-
-  // temperature at i,j,k-1 and i,j,k+1 //
-  double tm1_z= temp[k-1][j][i], tp1_z= temp[k+1][j][i];
-
-  // temperature at i,,k //
-  double t_c = temp[k][j][i];
-
-  /***********************************************************************/
-  
   // calculate proton and positron numbe density, all in cgs //
   nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP, npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
 
   // electron by charge neutrality //
   nelec = nprot + npost, ntot = nelec + nprot + npost;
 
-  /***********************************************************************/
-
-  // dTdx //
-  double dTdx = 0.5*(tp1_x - tm1_x)/dx[1];
-
-  // dTdy //
-  double dTdy = 0.5*(tp1_y - tm1_y)/dx[2];
-
-  // dTdz //
-  double dTdz = 0.5*(tp1_z - tm1_z)/dx[3];
+  // temperature at i,,k //
+  double t_p = Ss->P[UU][k][j][i]*U_unit*(gam - 1.)/(ntot*KBOL); 
 
   /***********************************************************************/
 
-  // define a 4-vector //
-  double gradT[NDIM], gradT_con[NDIM]; 
+  // optical depth and scale height //
+  double tau_depth = 0;
 
-  // assign temperature gradient 
-  gradT[0] = 0.0, gradT[1] = dTdx, gradT[2] = dTdy, gradT[3] = dTdz;
+  /*--------------------------------------------------------------------------------------------*/
+  // local variable storing integrand //
+  double np, n_p, n_e, nt, th_loc;
+  double upper = 0;
+  double lower = 0; 
 
-  // raise the index  //
-  for (int mu = 0; mu < NDIM; mu++) {
-    gradT_con[mu] = 0.;
-    for (int nu = 0; nu < NDIM; nu++) {
-      gradT_con[mu] += G->gcon[CENT][mu][nu][j][i]*gradT[nu];
+  // integrate optical depth and scale height //
+  // they are all in the C.G.S unit //
+  if(theta < M_PI_2) {
+    // upper hemisphere //
+    for (int m = 0 + NG; m <= j; m++) {
+      coord(i, m, k, CENT, X);
+      bl_coord(X, &rad, &th_loc);
+      np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
+      n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
+      n_e = np + n_p;
+      nt = n_e + np + n_p;
+      tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
+      upper = upper + Ss->P[RHO][k][m][i]*fabs(th_loc - M_PI_2)*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
+      lower = lower + Ss->P[RHO][k][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
+    }
+  } else {
+    // lower hemispehere
+    for (int m = N2 + NG; m >= j; m--) {
+      coord(i, m, k, CENT, X);
+      bl_coord(X, &rad, &th_loc);
+      np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
+      n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
+      n_e = np + n_p;
+      nt = n_e + np + n_p;
+      tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
+      upper = upper + Ss->P[RHO][k][m][i]*fabs(th_loc - M_PI_2)*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
+      lower = lower + Ss->P[RHO][k][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
     }
   }
 
-  // perform the dot product 
-  double norm_gradT = sqrt(fabs(dot(gradT_con, gradT)));
+  // scale height, remember change to CGS //
+  double h_th = upper/lower*L_unit;
+  /*--------------------------------------------------------------------------------------------*/
 
-  /***********************************************************************/
-
-  // get the thermal scale height, remeber to convert to CGS //
-  double h_th = 0.25*t_c/norm_gradT*L_unit;
-
-  // optical depth //
-  double tau_depth = 2.0*(nelec + npost)*sigma_t*h_th; 
-  
   /***********************************************************************/
 
   // dimensionless temperature and postiron fraction //
-  double thetae = KBOL*t_c/(ME*CL*CL); 
+  double thetae = KBOL*t_elec/(ME*CL*CL); 
   double zfrac = npost/nprot; 
 
   /***********************************************************************/
   /* now calculate pair production rate */
 
-  /* limit the optical depth */
-  if(isnan(tau_depth)) {
-    if(mpi_io_proc()) printf("Diverging optical depth\n");
-    return;
-  }
-
   // net pair production rate, note the rate is in the CGS unit!!! //
   double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
-  
+
   /* do these steps only if the production rate is non-zero */
   if(fabs(net_rate) > 0) {    
 
     // quality factor //
     double qfac = fabs(npost/net_rate);
 
-    /* if the source term is too steep, implement implicit solver */
-    /* Crank-Nicolson method, inspired by Lia's thesis */
+    /* if the source term is too steep, implement implicit solver 
+    /* Crank-Nicolson method, inspired by Lia's thesis 
     /* Basically a root finding, so use bisection mtehod */
     if(dt_real > q_alpha*qfac) {
+      printf("net_rate too steep %d %d %d\n", i, j, k);
+      return; 
 
-      /* print out */
+      /* print out 
       if(mpi_io_proc()) printf("net_rate too steep %d %d %d\n", i, j, k);
 
-      /* left state */
+      /* left state 
       double zl = zfrac;
       double tl = t_c/(zl + 1)*(zfrac + 1);
       double h_l = h_th*tl/t_c;
-      double taul = 2.0*(2*zl + 1)*nprot*sigma_t*h_l;
+      double taul = tau_depth //2.0*(2*zl + 1)*nprot*sigma_t*h_l;
       double theta_l = thetae*tl/t_c;
       double ndotl = ndot_net(zl, taul, nprot, theta_l, h_l);
       double fl = (zl - zfrac) - dt_real*ndotl/nprot;
 
-      /* right state */
+      /* right state 
       int o;
       double zr, tr, h_r, taur, theta_r, ndotr, fr, steps;
       if(net_rate > 0) {
@@ -276,7 +249,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       for (o = 0; o < 999; o++) {
         tr = t_c/(zr + 1)*(zfrac + 1);
         h_r = h_th*tr/t_c;
-        taur = 2.0*(2*zr + 1)*nprot*sigma_t*h_r;
+        taur = tau_depth //2.0*(2*zr + 1)*nprot*sigma_t*h_r;
         theta_r = thetae*tr/t_c;
         ndotr = ndot_net(zr, taur, nprot, theta_r, h_r);
         fr = (zr - zfrac) - dt_real*ndotr/nprot;
@@ -284,42 +257,43 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         zr = zr*steps;
       }
 
+      /* exit condition 
       if(o == 999 || isnan(fr)) {
         if(mpi_io_proc()) printf("Failure in implicit method\n");
         return;
       }
 
-      /* define the center state */
+      /* define the center state 
       double zcen, tcen, h_cen, taucen, theta_cen, ndotcen, fcen, zcen_old;
 
-      /* bisection method counting */
+      /* bisection method counting 
       int count;
 
-      /* now iterate until converges */
+      /* now iterate until converges 
       for (count = 0; count < 99999; count++) {
 
-        /* backup */
+        /* backup 
         if(count > 0) {
           zcen_old = zcen;
         }
 
-        /* center state */
+        /* center state 
         zcen = 0.5*(zl + zr);
         tcen = t_c/(zcen + 1)*(zfrac + 1);
         h_cen = h_th*tcen/t_c;
-        taucen = 2.0*(2*zcen + 1)*nprot*sigma_t*h_cen;
+        taucen = tau_depth //2.0*(2*zcen + 1)*nprot*sigma_t*h_cen;
         theta_cen = thetae*tcen/t_c;
         ndotcen = ndot_net(zcen, taucen, nprot, theta_cen, h_cen);
         fcen = (zcen - zfrac) - dt_real*ndotcen/nprot;
         
-        /* check the sign */
+        /* check the sign 
         if (fl*fcen > 0) {
           zl = zcen;
         } else if (fr*fcen > 0) {
           zr = zcen;
         }
 
-        /* determine if need to exit */
+        /* determine if need to exit 
         if(count > 0) {
           if(fabs(1.0 - zcen_old/zcen) < bisects) {
             break;
@@ -327,13 +301,13 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         }
       }
 
-      /* exit if no solution, and print out error */
+      /* exit if no solution, and print out error 
       if(count == 99999) {
         if(mpi_io_proc()) printf("No solution\n");
         return;
       }
 
-      /* assign new positron mass, remember to convert back to code unit !!! */
+      /* assign new positron mass, remember to convert back to code unit !!! 
       npost = zcen*nprot;
       
     /* otherwise, march forward by time */
@@ -341,12 +315,11 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
       // positron mass production rate, need to convert to code unit!!! //
       npost = npost + net_rate*dt_real;
-
+    
     }
 
     // update positron mass //
     Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
-
   }
 }
 

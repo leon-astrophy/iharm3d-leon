@@ -237,26 +237,32 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     // Initialize a dummy fluid parcel
     PLOOP {
       Stmp->P[ip][k][j][i] = 0;
-      Stmp->U[ip][k][j][i] = 0;
+      Stmp->U[ip][k][j][i] = 0; 
     }
 
     // Add mass and internal energy, but not velocity
     Stmp->P[RHO][k][j][i] = MY_MAX(0., rhoflr_max - S->P[RHO][k][j][i]);
     Stmp->P[UU][k][j][i] = MY_MAX(0., uflr_max - S->P[UU][k][j][i]);
 
-    // Leon's patch, the 3-velocity cannot be zero!!! 
-    // i.e, the fluid parcel should be comoving //
-    Stmp->P[U1][k][j][i] = S->P[U1][k][j][i];
-    Stmp->P[U2][k][j][i] = S->P[U2][k][j][i];
-    Stmp->P[U3][k][j][i] = S->P[U3][k][j][i];
-
     // Leon's patch, positrons //
 #if POSITRONS
     Stmp->P[RPL][k][j][i] = MY_MAX(0., rplflr_max - S->P[RPL][k][j][i]);
 #endif
 
-    // Get conserved variables for the parcel
+    // Leon's patch, add 3-velocity //
+    Stmp->P[U1][k][j][i] = S->P[U1][k][j][i];
+    Stmp->P[U2][k][j][i] = S->P[U2][k][j][i];
+    Stmp->P[U3][k][j][i] = S->P[U3][k][j][i];
+
+    // Get covariant and contravariant velocity //
     get_state(G, Stmp, i, j, k, CENT);
+
+    // Zero the 3-velocity again //
+    Stmp->P[U1][k][j][i] = 0;
+    Stmp->P[U2][k][j][i] = 0;
+    Stmp->P[U3][k][j][i] = 0;
+
+    // convert to conservative variables
     prim_to_flux(G, Stmp, i, j, k, 0, CENT, Stmp->U);
 
     // And for the current state

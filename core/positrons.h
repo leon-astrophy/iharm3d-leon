@@ -21,6 +21,9 @@
 
 //******************************************************************************
 
+// Leon's patch, electron temperature //
+#define t_elec (1e9)
+
 // Leon's patch, fixup parameters for positron //
 #define RPLMINLIMIT (1.e-30)
 #define RPLMIN  (1.e-16)
