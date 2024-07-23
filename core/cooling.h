@@ -27,9 +27,6 @@
 // target scale hight //
 #define h_r (0.1)
 
-// control the cooling time scale 
-#define q_alpha (0.1)
-
 //******************************************************************************
 
 //parameters in the cooling functions//

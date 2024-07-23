@@ -11,7 +11,9 @@
 #include "math.h"
 #include "decs.h"
 #include "positrons.h"
+#include "cooling.h"
 #include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_sf_erf.h>
 
 // compile only if poistrons flag is on //
 #if POSITRONS
@@ -45,6 +47,7 @@ void set_units(struct GridGeom *G, struct FluidState *Ss)
   /* event horizon */
   double reh = 1 + sqrt(1 - a*a);
 
+  /*============================================================*/
   /* find the index for the event horizon */
   int ind;
   double rad, theta, X[NDIM];
@@ -56,7 +59,9 @@ void set_units(struct GridGeom *G, struct FluidState *Ss)
       break;
     }
   }
+  /*============================================================*/
 
+  /*===============================================================================*/
 #if !INTEL_WORKAROUND
 #pragma omp parallel for reduction(+:dmdt_horizon) collapse(2)
 #endif
@@ -66,10 +71,12 @@ void set_units(struct GridGeom *G, struct FluidState *Ss)
       dmdt_horizon += -Ss->P[RHO][k][j][ind]*Ss->ucon[1][k][j][ind]*G->gdet[CENT][j][ind]*dx[2]*dx[3];
     }
   }
+  /*===============================================================================*/
 
   /* mpi reduce */
   dmdt_horizon = mpi_reduce(dmdt_horizon);
 
+  /*===============================================================================*/
   /* determine of the horizon mass accretion rate is zero*/
   if(mpi_io_proc()) printf("Horizon mass accretion rate is %.12e\n\n", dmdt_horizon);
   if(dmdt_horizon == 0) {
@@ -80,6 +87,7 @@ void set_units(struct GridGeom *G, struct FluidState *Ss)
     dmdt_horizon = 0.1;
     return;
   }
+  /*===============================================================================*/
 
   /* Mass unit */
   M_unit = Mdot*T_unit/dmdt_horizon;
@@ -159,46 +167,89 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // optical depth and scale height //
   double tau_depth = 0;
+  double h_th = 0;
 
+  /* select mode of computing optical depth and scale height */
+  /* note, special care is needed if run on MPI */
   /*--------------------------------------------------------------------------------------------*/
+  // direct integration of optical depth and scale height //
+#if COMPUTE == DIRECT
   // local variable storing integrand //
+  int m_start, m_end;
   double np, n_p, n_e, nt, th_loc;
   double upper = 0;
   double lower = 0; 
+  double dummy;
 
   // integrate optical depth and scale height //
   // they are all in the C.G.S unit //
   if(theta < M_PI_2) {
     // upper hemisphere //
-    for (int m = 0 + NG; m <= j; m++) {
-      coord(i, m, k, CENT, X);
-      bl_coord(X, &rad, &th_loc);
-      np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
-      n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-      n_e = np + n_p;
-      nt = n_e + np + n_p;
-      tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
-      upper = upper + Ss->P[RHO][k][m][i]*fabs(th_loc - M_PI_2)*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-      lower = lower + Ss->P[RHO][k][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-    }
+    m_start = NG;
+    m_end = j;
   } else {
     // lower hemispehere
-    for (int m = N2 + NG; m >= j; m--) {
-      coord(i, m, k, CENT, X);
-      bl_coord(X, &rad, &th_loc);
-      np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
-      n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-      n_e = np + n_p;
-      nt = n_e + np + n_p;
-      tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
-      upper = upper + Ss->P[RHO][k][m][i]*fabs(th_loc - M_PI_2)*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-      lower = lower + Ss->P[RHO][k][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-    }
+    m_start = j;
+    m_end = N2 + NG;
+  }
+
+  /* sum over */
+  for (int m = m_start; m <= m_end; m++) {
+    coord(i, m, k, CENT, X);
+    bl_coord(X, &dummy, &th_loc);
+    np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
+    n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
+    n_e = np + n_p;
+    nt = n_e + np + n_p;
+    tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
+    upper = upper + nt*fabs(th_loc - M_PI_2)*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
+    lower = lower + nt*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
   }
 
   // scale height, remember change to CGS //
-  double h_th = upper/lower*L_unit;
+  h_th = upper/lower*L_unit;
+
+#elif COMPUTE == GAUSSIAN
   /*--------------------------------------------------------------------------------------------*/
+  // gaussian approximation //
+  // Note: need to find asymtopic 
+
+  // local variables // 
+  int j_mid;
+  double np, n_p, n_e, nt;
+  double t1, t2;
+  double dummy;
+
+  // calculate mid plane index //
+  j_mid = (int)((NG + N2 + NG)/2);
+
+  // mid plane number density //
+  np = Ss->P[RHO][k][j_mid][i]*RHO_unit/MP;
+  n_p = Ss->P[RPL][k][j_mid][i]*RHO_unit/ME;
+  n_e = np + n_p;
+  nt = n_e + np + n_p; 
+
+  // upper atmosphere //
+  if(theta < M_PI_2) {
+    t1 = - M_PI_2/h_r;
+    t2 = (theta - M_PI_2)/h_r;
+  } else {
+    t1 = (theta - M_PI_2)/h_r;
+    t2 = M_PI_2/h_r;
+  }
+  dummy = gsl_sf_erf(t2)-gsl_sf_erf(t1);
+  tau_depth = nt*(rad*h_r*L_unit)*(sqrt2*0.5*sqrt(M_PI))*(dummy)*sigma_t;
+  if(fabs(t1) > 5 && fabs(t2) > 5){
+    dummy = -sqrt(M_PI)*(exp(t1*t1-t2*t2) - 1)/(exp(t1*t1-t2*t2)*series_asym(t2) - series_asym(t1));
+    h_th = sqrt(2/M_PI)*(rad*h_r*L_unit)*dummy;
+  } else {
+    h_th = sqrt(2/M_PI)*(rad*h_r*L_unit)*(exp(-t2*t2) - exp(-t1*t1))/(dummy);
+  } 
+  h_th = fabs(h_th);
+  tau_depth = fmax(tau_depth, SMALL);
+
+  /*--------------------------------------------------------------------------------------------*/
+#endif
 
   /***********************************************************************/
 
@@ -211,22 +262,20 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // net pair production rate, note the rate is in the CGS unit!!! //
   double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
-
+  
   /* do these steps only if the production rate is non-zero */
   if(fabs(net_rate) > 0) {    
 
     // quality factor //
     double qfac = fabs(npost/net_rate);
 
+    /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
     /* if the source term is too steep, implement implicit solver 
-    /* Crank-Nicolson method, inspired by Lia's thesis 
     /* Basically a root finding, so use bisection mtehod */
     if(dt_real > q_alpha*qfac) {
       printf("net_rate too steep %d %d %d\n", i, j, k);
+      printf("%.12e\t%.12e\t%.12e\t%.12e\n", dt_real, net_rate, tau_depth, h_th);
       return; 
-
-      /* print out 
-      if(mpi_io_proc()) printf("net_rate too steep %d %d %d\n", i, j, k);
 
       /* left state 
       double zl = zfrac;
@@ -310,6 +359,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       /* assign new positron mass, remember to convert back to code unit !!! 
       npost = zcen*nprot;
       
+    /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
     /* otherwise, march forward by time */
     } else {
 
@@ -317,6 +367,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       npost = npost + net_rate*dt_real;
     
     }
+    /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
 
     // update positron mass //
     Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
@@ -696,6 +747,14 @@ inline double get_zfrac(double nprot, double thetae) {
   double u = 4/nprot/nprot/pow(lam_th,6)*exp(-2/thetae);
   double zfrac = 0.5*(-1+sqrt(1+4*u));
   return zfrac;
+}
+
+//******************************************************************************
+
+/* series expansion for error function */
+inline double series_asym(double x_in) {
+  double out = 1/x_in - 0.5/pow(x_in,3) + 0.75/pow(x_in,5) - 1.875/pow(x_in,7) + 6.5625/pow(x_in,9);
+  return out;
 }
 
 //******************************************************************************

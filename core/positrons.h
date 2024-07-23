@@ -19,6 +19,13 @@
 // overwriting MBH and eta_edd? //
 #define OVER_WRITE 1
 
+// mode of computing optical depth //
+#define DIRECT 1
+#define GAUSSIAN 2
+
+// which mode of computing optical depth //
+#define COMPUTE GAUSSIAN
+
 //******************************************************************************
 
 // Leon's patch, electron temperature //
@@ -28,9 +35,6 @@
 #define RPLMINLIMIT (1.e-30)
 #define RPLMIN  (1.e-16)
 #define ZMIN (1.e-10)
-
-// quality factor //
-#define q_alpha (0.1)
 
 // bisection threshold //
 #define bisects (1e-6)
@@ -87,5 +91,6 @@ double get_ndotwe(double ngamma, double nprot, double z, double theta);
 double get_ndotwf(double n1, double ngamma, double theta);
 double get_zfrac(double nprot, double thetae);
 double get_zfrac_fix_uu(double nprot, double ug, double ggas);
+double series_asym(double x_in);
 
 //******************************************************************************

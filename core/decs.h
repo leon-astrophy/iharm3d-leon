@@ -80,6 +80,9 @@
 // Leon's patch, include radiative cooling? //
 #define COOLING 1 
 
+// Leon's patch, quality factor //
+#define q_alpha (0.1)
+
 /****************************************************/
 
 ///////////////////////////////////////////////////////
