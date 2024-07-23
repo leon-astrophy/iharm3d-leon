@@ -24,7 +24,7 @@
 #define GAUSSIAN 2
 
 // which mode of computing optical depth //
-#define COMPUTE GAUSSIAN
+#define COMPUTE DIRECT
 
 //******************************************************************************
 

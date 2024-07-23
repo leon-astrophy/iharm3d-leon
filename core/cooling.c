@@ -173,28 +173,28 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
     double quu = fabs(Ss->U[UU][k][j][i]/duudt);
     if (dt_step > q_alpha*quu) {
       duudt = -q_alpha*fabs(Ss->U[UU][k][j][i])/dt_step;
-      if(mpi_io_proc()) printf("duudt too steep %d %d %d\n", i, j, k);
+      printf("duudt too steep %d %d %d\n", i, j, k);
     }
   }
   if(fabs(du1dt) > 0.0) {
     double qu1 = fabs(Ss->U[U1][k][j][i]/du1dt);
     if (dt_step > q_alpha*qu1) {
       du1dt = -q_alpha*fabs(Ss->U[U1][k][j][i])/dt_step;
-      if(mpi_io_proc()) printf("du1dt too steep %d %d %d\n", i, j, k);
+      printf("du1dt too steep %d %d %d\n", i, j, k);
     }
   }
   if(fabs(du2dt) > 0.0) {
     double qu2 = fabs(Ss->U[U2][k][j][i]/du2dt);
     if (dt_step > q_alpha*qu2) {
       du2dt = -q_alpha*fabs(Ss->U[U2][k][j][i])/dt_step;
-      if(mpi_io_proc()) printf("du2dt too steep %d %d %d\n", i, j, k);
+      printf("du2dt too steep %d %d %d\n", i, j, k);
     }
   }
   if(fabs(du3dt) > 0.0) {
     double qu3 = fabs(Ss->U[U3][k][j][i]/du3dt);
     if (dt_step > q_alpha*qu3) {
       du3dt = -q_alpha*fabs(Ss->U[U3][k][j][i])/dt_step;
-      if(mpi_io_proc()) printf("du3dt too steep %d %d %d\n", i, j, k);
+      printf("du3dt too steep %d %d %d\n", i, j, k);
     }
   }
 

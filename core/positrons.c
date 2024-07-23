@@ -273,22 +273,18 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     /* if the source term is too steep, implement implicit solver 
     /* Basically a root finding, so use bisection mtehod */
     if(dt_real > q_alpha*qfac) {
-      printf("net_rate too steep %d %d %d\n", i, j, k);
-      printf("%.12e\t%.12e\t%.12e\t%.12e\n", dt_real, net_rate, tau_depth, h_th);
-      return; 
 
-      /* left state 
+      /* print out */
+      printf("net_rate too steep %d %d %d\n", i, j, k);
+
+      /* left state */
       double zl = zfrac;
-      double tl = t_c/(zl + 1)*(zfrac + 1);
-      double h_l = h_th*tl/t_c;
-      double taul = tau_depth //2.0*(2*zl + 1)*nprot*sigma_t*h_l;
-      double theta_l = thetae*tl/t_c;
-      double ndotl = ndot_net(zl, taul, nprot, theta_l, h_l);
+      double ndotl = ndot_net(zl, tau_depth, nprot, thetae, h_th);
       double fl = (zl - zfrac) - dt_real*ndotl/nprot;
 
-      /* right state 
+      /* right state */
       int o;
-      double zr, tr, h_r, taur, theta_r, ndotr, fr, steps;
+      double zr, ndotr, fr, steps;
       if(net_rate > 0) {
         steps = 10;
       } else{
@@ -296,53 +292,45 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       }
       zr = zl;
       for (o = 0; o < 999; o++) {
-        tr = t_c/(zr + 1)*(zfrac + 1);
-        h_r = h_th*tr/t_c;
-        taur = tau_depth //2.0*(2*zr + 1)*nprot*sigma_t*h_r;
-        theta_r = thetae*tr/t_c;
-        ndotr = ndot_net(zr, taur, nprot, theta_r, h_r);
+        ndotr = ndot_net(zr, tau_depth, nprot, thetae, h_th);
         fr = (zr - zfrac) - dt_real*ndotr/nprot;
         if(fr*fl <0) break;
         zr = zr*steps;
       }
 
-      /* exit condition 
+      /* exit condition */
       if(o == 999 || isnan(fr)) {
-        if(mpi_io_proc()) printf("Failure in implicit method\n");
+        printf("Failure in implicit method\n");
         return;
       }
 
-      /* define the center state 
-      double zcen, tcen, h_cen, taucen, theta_cen, ndotcen, fcen, zcen_old;
+      /* define the center state */
+      double zcen, fcen, zcen_old, ndotcen;
 
-      /* bisection method counting 
+      /* bisection method counting */
       int count;
 
-      /* now iterate until converges 
+      /* now iterate until converges */
       for (count = 0; count < 99999; count++) {
 
-        /* backup 
+        /* backup */
         if(count > 0) {
           zcen_old = zcen;
         }
 
-        /* center state 
+        /* center state */
         zcen = 0.5*(zl + zr);
-        tcen = t_c/(zcen + 1)*(zfrac + 1);
-        h_cen = h_th*tcen/t_c;
-        taucen = tau_depth //2.0*(2*zcen + 1)*nprot*sigma_t*h_cen;
-        theta_cen = thetae*tcen/t_c;
-        ndotcen = ndot_net(zcen, taucen, nprot, theta_cen, h_cen);
+        ndotcen = ndot_net(zcen, tau_depth, nprot, thetae, h_th);
         fcen = (zcen - zfrac) - dt_real*ndotcen/nprot;
         
-        /* check the sign 
+        /* check the sign */
         if (fl*fcen > 0) {
           zl = zcen;
         } else if (fr*fcen > 0) {
           zr = zcen;
         }
 
-        /* determine if need to exit 
+        /* determine if need to exit */
         if(count > 0) {
           if(fabs(1.0 - zcen_old/zcen) < bisects) {
             break;
@@ -350,13 +338,13 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
         }
       }
 
-      /* exit if no solution, and print out error 
+      /* exit if no solution, and print out error */
       if(count == 99999) {
-        if(mpi_io_proc()) printf("No solution\n");
+        printf("No solution\n");
         return;
       }
 
-      /* assign new positron mass, remember to convert back to code unit !!! 
+      /* assign new positron mass, remember to convert back to code unit !!! */
       npost = zcen*nprot;
       
     /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
