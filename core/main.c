@@ -112,15 +112,25 @@ int main(int argc, char *argv[])
   // Perform initializations, either directly or via checkpoint
   is_restart = restart_init(G, S);
   if (!is_restart) {
+    
+    // Geneate initial conditions
     init(G, S);
+
+  // Leon's patch, initialize positrons //
+#if POSITRONS
+  init_positrons(G,S);
+#endif
+
     // Set globals
     nstep = 0;
     t = 0;
     dump_cnt = 0;
+
     // Zero the pflag array
     zero_arrays();
     if (mpi_io_proc())
       fprintf(stdout, "Initial conditions generated\n\n");
+  
   }
 
   // Leon's patch, initialize cooling //
@@ -130,15 +140,9 @@ int main(int argc, char *argv[])
 
   // Leon's patch, positron related //
 #if POSITRONS
-#if PAIRS
   // Leon's patch, set units only if we are doing pair productions //
-  set_units(G,S);
+  set_units();
 #endif
-  // Leon's patch, initialize positrons even if we do not do pair productions //
-#if INIT_PAIRS
-  init_positrons(G,S);
-#endif
-#endif  
 
   // In case we're restarting and these changed
   tdump = t + DTd;

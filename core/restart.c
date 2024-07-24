@@ -115,7 +115,7 @@ void restart_write_backend(struct FluidState *S, int type)
 
   // Leon's patch, mass unit and black hole mass //
   hdf5_write_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
-  hdf5_write_single_val(&eta_edd, "eta_edd", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&M_unit, "M_unit", H5T_IEEE_F64LE);
 
   /*--------------------------------------------------*/
 
@@ -236,13 +236,6 @@ if (METRIC != MKS) {
 #endif
 
   /*--------------------------------------------------*/
-
-  // Leon's patch, mass unit and black hole mass //
-  // However, if we want to over write these values, do not read in //
-#if POSITRONS && !OVER_WRITE
-  hdf5_read_single_val(&mbh, "mbh", H5T_IEEE_F64LE);
-  hdf5_read_single_val(&eta_edd, "eta_edd", H5T_IEEE_F64LE);
-#endif
 
 /////////////////////////////////////////////////////////////
 //  hdf5_read_single_val(&tdump, "tdump", H5T_IEEE_F64LE);

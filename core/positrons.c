@@ -21,76 +21,14 @@
 //******************************************************************************
 
 // set the unit convestion between code and cgs // 
-void set_units(struct GridGeom *G, struct FluidState *Ss)
-{
+void set_units () {
+
   /* black hole mass in cgs */ 
   Mbh = mbh*MSUN;
 
   /* Length and time scales */
   L_unit = GNEWT*Mbh/(CL*CL);
   T_unit = L_unit/CL;
-
-  /* Eddington luminosity, stolen from GRTRANS:) */
-  double leddval = 4*M_PI*GNEWT*Mbh*MP*CL/sigma_t;
-
-  /* Eddington accretion rate, assume nominal efficiency of 10% */
-  double Mdotedd = leddval/CL/CL/0.1;
-
-  /* target accretion rate in terms of Eddington */
-  /* Here, Mdot is in cgs */
-  double Mdot = eta_edd*Mdotedd;
-
-  /* Mdot measured at the event horizon */
-  /* If the Mdot at event horizon is zero, return errors */
-  double dmdt_horizon = 0.0;
-
-  /* event horizon */
-  double reh = 1 + sqrt(1 - a*a);
-
-  /*============================================================*/
-  /* find the index for the event horizon */
-  int ind;
-  double rad, theta, X[NDIM];
-  ILOOP {
-    coord(i, 0, 0, CENT, X);
-    bl_coord(X, &rad, &theta);    
-    if(rad >= reh){
-      ind = i;
-      break;
-    }
-  }
-  /*============================================================*/
-
-  /*===============================================================================*/
-#if !INTEL_WORKAROUND
-#pragma omp parallel for reduction(+:dmdt_horizon) collapse(2)
-#endif
-  JSLOOP(0, N2 - 1) {
-    KSLOOP(0, N3 - 1) {
-      /* differential mass accretion rate is -rho*u^r*sqrt(-g)*dtheta*dphi */
-      dmdt_horizon += -Ss->P[RHO][k][j][ind]*Ss->ucon[1][k][j][ind]*G->gdet[CENT][j][ind]*dx[2]*dx[3];
-    }
-  }
-  /*===============================================================================*/
-
-  /* mpi reduce */
-  dmdt_horizon = mpi_reduce(dmdt_horizon);
-
-  /*===============================================================================*/
-  /* determine of the horizon mass accretion rate is zero*/
-  if(mpi_io_proc()) printf("Horizon mass accretion rate is %.12e\n\n", dmdt_horizon);
-  if(dmdt_horizon == 0) {
-    if(mpi_io_proc()) {
-      printf("WARNING, the horizon mass accretion rate is zero\n");
-      printf("Will set an arbitary value\n");
-    }
-    dmdt_horizon = 0.1;
-    return;
-  }
-  /*===============================================================================*/
-
-  /* Mass unit */
-  M_unit = Mdot*T_unit/dmdt_horizon;
 
   /* Now set the remaining unit */
   RHO_unit = M_unit*pow(L_unit,-3.);
@@ -149,19 +87,11 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   // time step in second !
   double dt_real = dt_step*T_unit;
 
-  // nprot - proton, npost - prositron, nelec - electron //
-  double nprot, npost, nelec, ntot;
-
   /***********************************************************************/
   
   // calculate proton and positron numbe density, all in cgs //
-  nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP, npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
-
-  // electron by charge neutrality //
-  nelec = nprot + npost, ntot = nelec + nprot + npost;
-
-  // temperature at i,,k //
-  double t_p = Ss->P[UU][k][j][i]*U_unit*(gam - 1.)/(ntot*KBOL); 
+  double nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP;
+  double npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
 
   /***********************************************************************/
 
@@ -169,14 +99,12 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double tau_depth = 0;
   double h_th = 0;
 
-  /* select mode of computing optical depth and scale height */
-  /* note, special care is needed if run on MPI */
-  /*--------------------------------------------------------------------------------------------*/
   // direct integration of optical depth and scale height //
 #if COMPUTE == DIRECT
+  /*--------------------------------------------------------------------------------------------*/
   // local variable storing integrand //
   int m_start, m_end;
-  double np, n_p, n_e, nt, th_loc;
+  double np, n_p, nt, th_loc;
   double upper = 0;
   double lower = 0; 
   double dummy;
@@ -199,8 +127,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     bl_coord(X, &dummy, &th_loc);
     np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
     n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-    n_e = np + n_p;
-    nt = n_e + np + n_p;
+    nt = 2*(np + n_p);
     tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
     upper = upper + nt*fabs(th_loc - M_PI_2)*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
     lower = lower + nt*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
@@ -209,14 +136,14 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   // scale height, remember change to CGS //
   h_th = upper/lower*L_unit;
 
-#elif COMPUTE == GAUSSIAN
   /*--------------------------------------------------------------------------------------------*/
   // gaussian approximation //
+#elif COMPUTE == GAUSSIAN
   // Note: need to find asymtopic 
 
   // local variables // 
   int j_mid;
-  double np, n_p, n_e, nt;
+  double np, n_p, nt;
   double t1, t2;
   double dummy;
 
@@ -226,8 +153,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   // mid plane number density //
   np = Ss->P[RHO][k][j_mid][i]*RHO_unit/MP;
   n_p = Ss->P[RPL][k][j_mid][i]*RHO_unit/ME;
-  n_e = np + n_p;
-  nt = n_e + np + n_p; 
+  nt = 2*(np + n_p); 
 
   // upper atmosphere //
   if(theta < M_PI_2) {

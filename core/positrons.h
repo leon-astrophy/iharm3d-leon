@@ -13,18 +13,12 @@
 // do we calculate e-p pair production? //
 #define PAIRS 1
 
-// are we initializing e-p pairs? //
-#define INIT_PAIRS 1
-
-// overwriting MBH and eta_edd? //
-#define OVER_WRITE 1
-
 // mode of computing optical depth //
 #define DIRECT 1
 #define GAUSSIAN 2
 
 // which mode of computing optical depth //
-#define COMPUTE DIRECT
+#define COMPUTE GAUSSIAN
 
 //******************************************************************************
 

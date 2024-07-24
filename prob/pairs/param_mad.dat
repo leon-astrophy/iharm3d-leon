@@ -1,8 +1,8 @@
 ### RUNTIME PARAMETERS FOR LARGE-TORUS MAD###
 
 # Leon's patch, black hole mass (in solar mass) #
-# Also the fraction of Eddington limit #
-[dbl] eta_edd = 0.1
+# Also the unit conversion between code to cgs #
+[dbl] M_unit = 1e20
 [dbl] mbh = 1e8
 
 # COORDINATES: finaltime, dt, and outer boundaries
