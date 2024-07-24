@@ -36,6 +36,9 @@
 #define M_SQRT2 1.4142135623730950488016887242
 #endif
 
+// Leon's patch, number of OMP cores //
+#define OMP_CORES 1
+
 //*******************************************************************************
 //*
 //*      COMPILE-TIME PARAMETERS :
