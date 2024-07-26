@@ -10,13 +10,20 @@
 // header files
 #include "math.h"
 #include "decs.h"
-#include "positrons.h"
 #include "cooling.h"
-#include <gsl/gsl_sf_bessel.h>
+#include "positrons.h"
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_sf_gamma.h>
+#include <gsl/gsl_sf_bessel.h>
 
 // compile only if poistrons flag is on //
 #if POSITRONS
+
+// some constants //
+double i0 = 4.0505;
+double i1 = 4.0505*0.40;
+double i2 = 4.0505*0.5316;
+double i3 = 1.8899;
 
 //******************************************************************************
 
@@ -100,7 +107,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double h_th = 0;
 
   // direct integration of optical depth and scale height //
-#if COMPUTE == DIRECT
   /*--------------------------------------------------------------------------------------------*/
   // local variable storing integrand //
   int m_start, m_end;
@@ -127,55 +133,17 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     bl_coord(X, &dummy, &th_loc);
     np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
     n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-    nt = 2*(np + n_p);
-    tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
+    nt = 2*n_p + np;
+    //tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
     upper = upper + nt*fabs(th_loc - M_PI_2)*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-    lower = lower + nt*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
+    lower = lower + nt*G->gdet[CENT][m][i]*dx[2];
   }
 
   // scale height, remember change to CGS //
   h_th = upper/lower*L_unit;
+  tau_depth = (2*npost + nprot)*h_th*sigma_t;
 
   /*--------------------------------------------------------------------------------------------*/
-  // gaussian approximation //
-#elif COMPUTE == GAUSSIAN
-  // Note: need to find asymtopic 
-
-  // local variables // 
-  int j_mid;
-  double np, n_p, nt;
-  double t1, t2;
-  double dummy;
-
-  // calculate mid plane index //
-  j_mid = (int)((NG + N2 + NG)/2);
-
-  // mid plane number density //
-  np = Ss->P[RHO][k][j_mid][i]*RHO_unit/MP;
-  n_p = Ss->P[RPL][k][j_mid][i]*RHO_unit/ME;
-  nt = 2*(np + n_p); 
-
-  // upper atmosphere //
-  if(theta < M_PI_2) {
-    t1 = - M_PI_2/h_r;
-    t2 = (theta - M_PI_2)/h_r;
-  } else {
-    t1 = (theta - M_PI_2)/h_r;
-    t2 = M_PI_2/h_r;
-  }
-  dummy = gsl_sf_erf(t2)-gsl_sf_erf(t1);
-  tau_depth = nt*(rad*h_r*L_unit)*(sqrt2*0.5*sqrt(M_PI))*(dummy)*sigma_t;
-  if(fabs(t1) > 5 && fabs(t2) > 5){
-    dummy = -sqrt(M_PI)*(exp(t1*t1-t2*t2) - 1)/(exp(t1*t1-t2*t2)*series_asym(t2) - series_asym(t1));
-    h_th = sqrt(2/M_PI)*(rad*h_r*L_unit)*dummy;
-  } else {
-    h_th = sqrt(2/M_PI)*(rad*h_r*L_unit)*(exp(-t2*t2) - exp(-t1*t1))/(dummy);
-  } 
-  h_th = fabs(h_th);
-  tau_depth = fmax(tau_depth, SMALL);
-
-  /*--------------------------------------------------------------------------------------------*/
-#endif
 
   /***********************************************************************/
 
@@ -186,8 +154,13 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /***********************************************************************/
   /* now calculate pair production rate */
 
+  // magnetic field strength //
+  get_state(G, Ss, i, j, k, CENT);
+  double bsq = bsq_calc(Ss, i, j, k);
+  double bfield = sqrt(bfield);
+
   // net pair production rate, note the rate is in the CGS unit!!! //
-  double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th);
+  double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th, bfield);
   
   /* do these steps only if the production rate is non-zero */
   if(fabs(net_rate) > 0) {    
@@ -205,7 +178,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
       /* left state */
       double zl = zfrac;
-      double ndotl = ndot_net(zl, tau_depth, nprot, thetae, h_th);
+      double ndotl = ndot_net(zl, tau_depth, nprot, thetae, h_th, bfield);
       double fl = (zl - zfrac) - dt_real*ndotl/nprot;
 
       /* right state */
@@ -218,7 +191,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       }
       zr = zl;
       for (o = 0; o < 999; o++) {
-        ndotr = ndot_net(zr, tau_depth, nprot, thetae, h_th);
+        ndotr = ndot_net(zr, tau_depth, nprot, thetae, h_th, bfield);
         fr = (zr - zfrac) - dt_real*ndotr/nprot;
         if(fr*fl <0) break;
         zr = zr*steps;
@@ -246,7 +219,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
         /* center state */
         zcen = 0.5*(zl + zr);
-        ndotcen = ndot_net(zcen, tau_depth, nprot, thetae, h_th);
+        ndotcen = ndot_net(zcen, tau_depth, nprot, thetae, h_th, bfield);
         fcen = (zcen - zfrac) - dt_real*ndotcen/nprot;
         
         /* check the sign */
@@ -299,14 +272,16 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 //******************************************************************************
 
 /* net pair production rate */
-inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size) {
+inline double ndot_net(double zfrac, double taut, double nprot, double theta, double r_size, double bfield) {
   double xm = find_xm(zfrac, taut, nprot, theta);
   double ndotbr = get_ndotbr(zfrac, theta, xm, nprot);
   double y1 = comptony1(xm, taut, theta);
-  double fb = fbrem(y1);
+  double fb = fbrem(y1, taut, theta, xm);
   double n1 = flatn1(xm, theta, y1);
-  double ng = ngamma(xm, taut, theta, y1, zfrac, nprot, fb, ndotbr, r_size);
-  double nc = ncdot(ng, theta, nprot, zfrac, n1, fb, ndotbr);
+  double fs, ndots;
+  find_ndots(theta, taut, nprot, zfrac, r_size, bfield, &fs, &ndots);
+  double ng = ngamma(taut, theta, fb, ndotbr, fs, ndots, r_size);
+  double nc = ncdot(ng, theta, nprot, zfrac, n1);
   double na = nadot(zfrac, nprot, theta);
   return nc - na;
 }
@@ -314,7 +289,7 @@ inline double ndot_net(double zfrac, double taut, double nprot, double theta, do
 //******************************************************************************
 
 /* Total pair production rate due to photon-photo, photon-particle collision */
-inline double ncdot(double ngamma, double theta, double nprot, double z, double n1, double fb, double ndotbr) {
+inline double ncdot(double ngamma, double theta, double nprot, double z, double n1) {
   double ndotww = get_ndotww(ngamma, theta);
   double ndotwp = get_ndotwp(ngamma, nprot, theta);
   double ndotwe = get_ndotwe(ngamma, nprot, z, theta);
@@ -331,10 +306,8 @@ inline double get_ndotee(double nprot, double z, double theta) {
   double ndot;
   if(theta <= 1e2) {
     ndot = 2e-4*pow(theta,1.5)*exp(-2.0/theta)*(1.0+0.015*theta);
-  } else if(theta >= 1e2) {
-    ndot = (112.0/27.0/M_PI)*(alphaf*alphaf)*pow(log(theta),3)/(1.0 + 0.058/theta);
   } else {
-    ndot = 0.0;
+    ndot = (112.0/27.0/M_PI)*(alphaf*alphaf)*pow(log(theta),3)/(1.0 + 0.058/theta);
   }
   ndot = ndot*CL*RE*RE*(nprot*(1.0 + z))*(nprot*(1.0 + z));
   return ndot;
@@ -415,22 +388,9 @@ inline double get_ndotwf(double n1, double ngamma, double theta) {
 
 //******************************************************************************
 
-/* integration of ln(A*theta/x)/x */
-inline double integrate_log(double A, double theta, double xm) {
-  double x1 = xm;
-  double x2 = theta;
-  double f1 = log(A*theta/x1)*log(x1) + 0.5*log(x1)*log(x1);
-  double f2 = log(A*theta/x2)*log(x2) + 0.5*log(x2)*log(x2);
-  return f2 - f1;
-}
-
-//******************************************************************************
-
 /* electron-proton bremsstrahlung total rate */
 inline double rate_ep(double z, double nprot, double theta, double xm) {
-  double A = 4*eta*(1+3.42*theta);
-  double integrate = integrate_log(A, theta, xm);
-  double out = (1+2*z)*(1+2*theta+2*theta*theta)*integrate;
+  double out = (1+2*z)*(1+2*theta+2*theta*theta)*log(4*eta*(1+3.42*theta)*sqrt(theta/xm));
   return out;
 }
 
@@ -438,9 +398,7 @@ inline double rate_ep(double z, double nprot, double theta, double xm) {
 
 /* electron-electron bremsstrahlung */
 inline double rate_ee(double z, double nprot, double theta, double xm) {
-  double A = 4*eta*(11.2+10.4*theta*theta);
-  double integrate = integrate_log(A, theta, xm);
-  double out = (z*z+(1+z)*(1+z))*(3*sqrt2/5*theta+2*theta*theta)*integrate;
+  double out = (z*z+(1+z)*(1+z))*(3*sqrt2/5*theta+2*theta*theta)*log(4*eta*(11.2+10.4*theta*theta)*sqrt(theta/xm));
   return out;
 }
 
@@ -448,9 +406,7 @@ inline double rate_ee(double z, double nprot, double theta, double xm) {
 
 /* electron-positron bremsstrahlung */
 inline double rate_pm(double z, double nprot, double theta, double xm) {
-  double A = 4*eta*(1+10.4*theta*theta);
-  double integrate = integrate_log(A, theta, xm);
-  double out = z*(1+z)*2*(sqrt2+2*theta+2*theta*theta)*integrate;
+  double out = z*(1+z)*2*(sqrt2+2*theta+2*theta*theta)*log(4*eta*(1+10.4*theta*theta)*sqrt(theta/xm));
   return out; 
 }
 
@@ -461,12 +417,11 @@ inline double get_ndotbr(double z, double theta, double xm, double nprot) {
   double thetam1 = 1/theta;
   double corr;
   if(thetam1 < 500) {
-    double k2 = gsl_sf_bessel_Kn(2, thetam1);
-    corr = exp(thetam1)*k2;
+    corr = exp(thetam1)*gsl_sf_bessel_Kn(2, thetam1);
   } else {
     corr = sqrt(M_PI_2/thetam1);
   }
-  double factor = (16/3)*(alphaf)*(CL)*(RE*RE)*(nprot*nprot)/(corr);
+  double factor = (16/3)*(alphaf)*(CL)*(RE*RE)*(nprot*nprot)/(corr)*log(theta/xm);
   double ep = rate_ep(z, nprot, theta, xm);
   double ee = rate_ee(z, nprot, theta, xm);
   double pm = rate_pm(z, nprot, theta, xm);
@@ -501,8 +456,7 @@ inline double n0dot(double x, double nprot, double theta) {
   double thetam1 = 1/theta;
   double corr;
   if(thetam1 < 500) {
-    double k2 = gsl_sf_bessel_Kn(2, thetam1);
-    corr = exp(thetam1)*k2;
+    corr = exp(thetam1)*gsl_sf_bessel_Kn(2, thetam1);
   } else {
     corr = sqrt(M_PI_2/thetam1);
   }
@@ -513,24 +467,24 @@ inline double n0dot(double x, double nprot, double theta) {
 //******************************************************************************
 
 /* electron-proton bremsstrahlung */
-inline double ndotep(double x, double z, double nprot, double theta, double dn0dt) {
-  double out = (1+2*z)*log(4*eta*(1+3.42*theta)*(theta/x))*(1+2*theta+2*theta*theta)*dn0dt;
+inline double ndotep(double x, double z, double nprot, double theta) {
+  double out = (1+2*z)*log(4*eta*(1+3.42*theta)*(theta/x))*(1+2*theta+2*theta*theta);
   return out;
 }
 
 //******************************************************************************
 
 /* electron-electron bremsstrahlung */
-inline double ndotee(double x, double z, double nprot, double theta, double dn0dt) {
-  double out = (z*z+(1+z)*(1+z))*log(4*eta*(11.2+10.4*theta*theta)*(theta/x))*(3*sqrt2/5*theta+2*theta*theta)*dn0dt;
+inline double ndotee(double x, double z, double nprot, double theta) {
+  double out = (z*z+(1+z)*(1+z))*log(4*eta*(11.2+10.4*theta*theta)*(theta/x))*(3*sqrt2/5*theta+2*theta*theta);
   return out;
 }
 
 //******************************************************************************
 
 /* electron-positron bremsstrahlung */
-inline double ndotpm(double x, double z, double nprot, double theta, double dn0dt) {
-  double out = z*(1+z)*log(4*eta*(1+10.4*theta*theta)*(theta/x))*2*(sqrt2+2*theta+2*theta*theta)*dn0dt;
+inline double ndotpm(double x, double z, double nprot, double theta) {
+  double out = z*(1+z)*log(4*eta*(1+10.4*theta*theta)*(theta/x))*2*(sqrt2+2*theta+2*theta*theta);
   return out;
 }
 
@@ -540,11 +494,120 @@ inline double ndotpm(double x, double z, double nprot, double theta, double dn0d
 inline double brem_abs(double x, double z, double nprot, double theta) {
   double bb = nbb(x, theta);
   double dn0dt = n0dot(x, nprot, theta);
-  double ep = ndotep(x, z, nprot, theta, dn0dt);
-  double ee = ndotee(x, z, nprot, theta, dn0dt);
-  double pm = ndotpm(x, z, nprot, theta, dn0dt);
-  double out = (ep + ee + pm)/(CL*bb);
+  double ep = ndotep(x, z, nprot, theta);
+  double ee = ndotee(x, z, nprot, theta);
+  double pm = ndotpm(x, z, nprot, theta);
+  double out = dn0dt*(ep + ee + pm)/(CL*bb);
   return out;
+}
+
+//*------------------------------------------------------------------------------------------------------------------------*//
+//
+// These sections related to the synchroton emission 
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//******************************************************************************
+
+/* root finding for xs */
+inline double ix(double x, double A_in) {
+  double out = (i0/pow(x,1/6) + i1/pow(x,5/12) + i2/pow(x,2/3))*exp(-i3*pow(x,1/3)) - A_in*x;
+  return out;
+}
+
+//******************************************************************************
+
+/* newton raphson derivative */
+inline double didx(double x, double A_in) {
+  double out = (- i0/6/pow(x,7/6) - i1*5/12/pow(x,17/12) - i2*2/3/pow(x,5/3) - i0*i3/3/pow(x,5/6) - i1*i3/3/pow(x,13/12) - i2*i3/3/pow(x,4/3))*exp(-i3*pow(x,1/3));
+  out = out - A_in;
+  return out;
+}
+
+//******************************************************************************
+
+/* finding self absorbption frequency */
+inline double find_xs(double thetae, double nprot, double zfrac, double v0, double h_scale) {
+
+  // prefactor A 
+  double A_fac = 2*sqrt(3)*ME*CL*thetae*(2*thetae*thetae)*(3*v0*pow(thetae,2)/2)/4/pow(QE,2)/nprot/(2*zfrac+1)/h_scale;
+
+  // do newton rapshon 
+  int n;
+  double xnew;
+  double xold = 1;
+  for (n = 0; n <= 999; n++) {
+    xnew = xold - ix(xold, A_fac)/didx(xold, A_fac);
+    if(fabs(1.0 - xnew/xold) < bisects) break;
+    xold = xnew;
+  }
+
+  // exit condition 
+  if(n == 999) {
+    printf("no solution in xs");
+    exit(0);
+  }
+    
+  // calculate nus 
+  double nus = 1.5*xnew*v0*thetae*thetae;
+    
+  // return 
+  return nus;
+
+}
+
+//******************************************************************************
+
+/* fraction scattered to wien peak */
+inline double fraction(double x, double taut, double thetae) {
+  double out;
+  double alpha = 3;
+  double logthx = log(alpha*thetae/x);
+  double logA = log(1 + 4*thetae + 16*pow(thetae,2));
+  double jm = logthx/logA;
+  if(taut > 1) {
+    out = exp(-jm/pow(taut,2));
+  } else {
+    double stau = taut + taut*taut;
+    out = gsl_sf_gamma_inc_P(jm, stau);
+  }
+  return out;
+}
+
+//******************************************************************************
+
+/* find synchrotron radiation production rate */
+inline void find_ndots(double thetae, double taut, double nprot, double zfrac, double h_scale, double bfield, double *fs, double *ndots) {
+    
+  // find cyclotron frequency 
+  double v0 = QE*bfield/2/M_PI/ME/CL;
+    
+  // first, find self-absorption frequency 
+  double nus = find_xs(thetae, nprot, zfrac, v0, h_scale);
+  double xs = hplanck*nus/ME/CL/CL;
+
+  // fraction scattered to wien peak #
+  *fs = fraction(xs, taut, thetae);
+    
+  // then, calculate coefficient 
+  double a1 = 2/3/v0/thetae/thetae;
+  double a2 = 0.4/pow(a1,1/4);
+  double a3 = 0.5316/sqrt(a1);
+  double a4 = 1.8899*pow(a1,1/3);
+
+  // calculate the cooling rate 
+  double one = gsl_sf_gamma_inc(5.5, a4*pow(nus,1/3))/pow(a4,5.5);
+  double two = gsl_sf_gamma_inc(4.75, a4*pow(nus,1/3))*a2/pow(a4,4.75);
+  double three = a3*(pow(a4,3)*nus + 3*pow(a4,2)*pow(nus,2/3) + 6*a4*pow(nus,1/3) + 6)*exp(-a4*pow(nus,1/3))/pow(a4,4);
+  double gnus = one + two + three;
+
+  // cooling rate 
+  double qs = 2*M_PI*(thetae*ME)*pow(nus,3)/3/h_scale;
+  qs = qs + (6.76e-28)*nprot*(2*zfrac+1)*gnus/(2*thetae*thetae)/pow(a1,1/6);
+
+  // production rate 
+  *ndots = qs/hplanck/nus;
+
 }
 
 //*------------------------------------------------------------------------------------------------------------------------*//
@@ -563,7 +626,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
 
   /* set the LHS of the root */
   double at = (2*z+1)*nprot*sigma_t;
-  double lhs = at*(1+zeta*(tau*tau)*fmin(1,8*theta))/(tau*(1+zeta*tau));
+  double lhs = at*(1+(tau*tau)*fmin(1,8*theta))/(tau*(1+tau));
     
   /* initial guess */
   double xl = -50, xr = log10(700);
@@ -574,7 +637,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
    
   /* poor initial guess, exit */
   if(fl*fr > 0) {
-    if(mpi_io_proc()) printf("poor initial guess xm");
+    printf("poor initial guess xm");
     exit(0);
   }
 
@@ -595,7 +658,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
     if(fabs(1.0 - xc/xc_old) < bisects) break;
   }
   if(n == 99999) {
-    if(mpi_io_proc()) printf("no solution in xm");
+    printf("no solution in xm");
     exit(0);
   }
 
@@ -606,12 +669,38 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
 //******************************************************************************
 
 /* fraction of up-scattered bremsstrahlung photon */
-inline double fbrem(double y) {
-  double out; 
-  if(y <= 1e3) {
-    out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
+inline double fbrem(double y, double taut, double theta, double xm) {
+  double out = 0; 
+  double alpha = 3;
+  double log_alpha = log(alpha);
+  double logA = log(1.0+4.0*theta+16.0*theta*theta);
+  if(taut > 0) { 
+    if(y <= 1e3) {
+      out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
+    } else {
+      out = 1.0 - 2.0/3.0/y;
+    }
+    out = out*exp(-log_alpha/pow(taut,2)/logA);
   } else {
-    out = 1.0 - 2.0/3.0/y;
+    double u0, u1, u2, u3, u4;
+    double f0, f1, f2, f3, f4;
+    int n_grid = 100;
+    double stau = taut + pow(taut,2);
+    double logthx = log(theta/xm);
+    double dh = (float)logthx/n_grid;
+    for (int o = 0; o <= n_grid; o += 4) {
+      u0 = dh*(float)o;
+      u1 = u0 + dh;
+      u2 = u0 + 2*dh;
+      u3 = u0 + 3*dh;
+      u4 = u0 + 4*dh;
+      f0 = u0*gsl_sf_gamma_inc_P((u0+log_alpha)/logA, stau);
+      f1 = u1*gsl_sf_gamma_inc_P((u1+log_alpha)/logA, stau);
+      f2 = u2*gsl_sf_gamma_inc_P((u2+log_alpha)/logA, stau);
+      f3 = u3*gsl_sf_gamma_inc_P((u3+log_alpha)/logA, stau);
+      f4 = u4*gsl_sf_gamma_inc_P((u4+log_alpha)/logA, stau);
+      out = out + (2/45)*dh*(7*f0 + 32*f1 + 12*f2 + 32*f3 + 7*f4);
+    }
   }
   return out;
 }
@@ -620,7 +709,7 @@ inline double fbrem(double y) {
 
 /* compton y1 parameter */
 inline double comptony1(double x, double tau, double theta) {
-  double out = zeta*(tau*tau)*log(1.0+4.0*theta+16.0*theta*theta)/log(theta/x);
+  double out = (tau*tau)*log(1.0+4.0*theta+16.0*theta*theta)/log(theta/x);
   return out;
 }
 
@@ -635,14 +724,14 @@ inline double flatn1(double x, double theta, double y) {
 //******************************************************************************
 
 /* wien spectrum number density */
-inline double ngamma(double xm, double tau, double theta, double y1, double z, double nprot, double fb, double ndotbr, double r_size) {
+inline double ngamma(double tau, double theta, double fb, double ndotbr, double fs, double ndots, double r_size) {
   double gt;
   if(theta < 1.0) {
     gt = 1.0/(1.0 + 5.0*theta + 0.4*theta*theta);
   } else {
     gt = (0.1875)*(log(2.0*eta*theta)+0.75)/(1.0+(0.1/theta))/(theta*theta);
   }
-  double ng = r_size/CL*(1.0 + zeta*gt*tau)*fb*ndotbr;
+  double ng = r_size/CL*(1.0 + gt*tau)*(fb*ndotbr + fs*ndots);
   return ng;
 }
 
@@ -665,10 +754,71 @@ inline double get_zfrac(double nprot, double thetae) {
 
 //******************************************************************************
 
-/* series expansion for error function */
-inline double series_asym(double x_in) {
-  double out = 1/x_in - 0.5/pow(x_in,3) + 0.75/pow(x_in,5) - 1.875/pow(x_in,7) + 6.5625/pow(x_in,9);
-  return out;
+/* Coulomb coupling, stolen from ebhlight */
+/* Eventually, this subroutine should migrate back to electrons.c */
+inline double coulomb_onezone(struct FluidState *S, double thetae, double ue, int i, int j, int k)
+{
+
+  /* note that I have changed some variable decleration */
+  /* this subroutine needed to be contionusly udpated */
+  double rho = S->P[RHO][k][j][i];
+  double up = S->P[UU][k][j][i];
+  double np = rho*RHO_unit/MP;
+  double Tp = up*U_unit*(gam - 1.)/(np*KBOL);
+  double thetap = KBOL*Tp/(MP*CL*CL);
+  double thetam = 1./(1./thetae + 1./thetap);
+  double logCoul = COULOMB_LOG;
+  double Te = thetae*ME*CL*CL/KBOL;
+
+  // Leon's patch, positron //
+  double rpl = S->P[RPL][k][j][i];
+  double npost = rpl*RHO_unit/ME;  
+
+  // Sanity checks, although electron fixup routine should catch these
+  double Qc;
+  if (!isnan(Te) && !isnan(Tp) && Te > 0. && Tp > 0.)
+  {
+    double term1, term2;
+
+    // Get Coulomb heating rate.
+    // Need to handle cases where thetap < 1e-2, Thetae < 1e-2, and both
+    // Thetae and thetap < 1e-2 separately due to Bessel functions exploding
+    double prefac = 3./2.*ME/MP*npost*np*logCoul*CL*KBOL*sigma_t*(Tp - Te);
+    double thetaCrit = 1.e-2;
+    if (thetae < thetaCrit && thetap < thetaCrit) {
+      term1 = sqrt(thetam/(M_PI*thetae*thetap/2.));                          
+      term2 = sqrt(thetam/(M_PI*thetae*thetap/2.));
+    } else if (thetae < thetaCrit) {
+      term1 = exp(-1./thetap)/safe_Kn(2, 1./thetap)*sqrt(thetam/thetae);
+      term2 = exp(-1./thetap)/safe_Kn(2, 1./thetap)*sqrt(thetam/thetae);
+    } else if (thetap < thetaCrit) {
+      term1 = exp(-1./thetae)/safe_Kn(2, 1./thetae)*sqrt(thetam/thetap);
+      term2 = exp(-1./thetae)/safe_Kn(2, 1./thetae)*sqrt(thetam/thetap);
+    } else {
+      term1 = safe_Kn(1, 1./thetam)/(safe_Kn(2, 1./thetae)*safe_Kn(2, 1./thetap));
+      term2 = safe_Kn(0, 1./thetam)/(safe_Kn(2, 1./thetae)*safe_Kn(2, 1./thetap));
+    }
+    term1 *= (2.*pow(thetae + thetap,2) + 1.)/(thetae + thetap);
+    term2 *= 2.;
+    Qc = prefac*(term1 + term2);
+
+  } else {
+    Qc = 0;
+  }
+
+  return Qc;
+}
+
+//******************************************************************************
+
+// Modified Bessel function of second kind with safe inputs
+inline double safe_Kn(int n, double x)
+{
+  if (x > 100.) {
+    return exp(-x)*sqrt(M_PI/(2.*x));
+  } else {
+    return gsl_sf_bessel_Kn(n, x);
+  }
 }
 
 //******************************************************************************

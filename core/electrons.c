@@ -203,4 +203,3 @@ inline void fixup_electrons_1zone(struct FluidState *S, int i, int j, int k)
 
 }
 #endif // ELECTRONS
-
