@@ -674,7 +674,7 @@ inline double fbrem(double y, double taut, double theta, double xm) {
   double alpha = 3;
   double log_alpha = log(alpha);
   double logA = log(1.0+4.0*theta+16.0*theta*theta);
-  if(taut > 0) { 
+  if(taut > 1) { 
     if(y <= 1e3) {
       out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
     } else {
