@@ -128,8 +128,8 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   /*-------------------------------------------------------*/
   // this is Noble 2009 approach //
 #if WHICHCOOLING == NOBLE
-  double Be = (1 + eps_loc*gam)*u0; 
-  if (Be > -1) {
+  double Be = (1.0 + eps_loc*gam)*u0; 
+  if (Be > -1.0) {
     qdot_cool = pow(y_cool - 1.0 + fabs(y_cool - 1.0), q_cool);
     qdot_cool *= s_cool*omg_gr[k][j][i]*rho_loc*eps_loc;
   } else {
