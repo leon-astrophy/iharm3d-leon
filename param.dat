@@ -2,7 +2,9 @@
 
 # Leon's patch, black hole mass (in solar mass) #
 # Also the unit conversion between code to cgs #
-[dbl] M_unit = 2.729105562275544e+24
+# 6.237485802827566e+24 for gaussian 
+# 2.729105562275545e+24 for direct 
+[dbl] M_unit = 2.729105562275545e+24 
 [dbl] mbh = 1e8
 
 # COORDINATES: finaltime, dt, and outer boundaries

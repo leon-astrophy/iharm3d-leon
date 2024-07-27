@@ -6,8 +6,8 @@
  *                                                                            *
  ******************************************************************************/
 
-#include "bl_coord.h"
 #include "decs.h"
+#include "bl_coord.h"
 #include "hdf5_utils.h"
 
 // Rootfinding for analytic Bondi solution
@@ -15,27 +15,43 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
+/*****************************************************************************/
+
+// some variabls //
 double C4, C3, n, K;
 
+// mass accretion rate and sonic radius //
 double mdot, rs;
+
+/*****************************************************************************/
+
+// load from the parameter file //
 void set_problem_params() {
   set_param("mdot", &mdot);
   set_param("rs", &rs);
   set_param("Rhor", &Rhor);
 }
 
+/*****************************************************************************/
+
+// write to header //
 void save_problem_data(hid_t string_type){
         hdf5_write_single_val("bondi", "PROB", string_type);
         hdf5_write_single_val(&mdot, "mdot", H5T_IEEE_F64LE);
         hdf5_write_single_val(&rs, "rs", H5T_IEEE_F64LE);
 }
 
-// Adapted from M. Chandra
+/*****************************************************************************/
+
+// Get temperature, Adapted from M. Chandra
 double get_Tfunc(double T, double r)
 {
   return pow(1.+(1.+n)*T,2.)*(1.-2./r+pow(C4/r/r/pow(T,n),2.))-C3;
 }
 
+/*****************************************************************************/
+
+// Get temperature //
 double get_T(double r)
 {
   double rtol = 1.e-12;
@@ -73,6 +89,9 @@ double get_T(double r)
   return Th;
 }
 
+/*****************************************************************************/
+
+// convert from 4-velocity to 3-velocity in the Eulerian Observer frame //
 void fourvel_to_prim(double ucon[NDIM], GridPrim P,
   struct GridGeom *G, int i, int j, int k)
 {
@@ -89,6 +108,9 @@ void fourvel_to_prim(double ucon[NDIM], GridPrim P,
   P[U3][k][j][i] = ucon[3] + beta[3]*gamma/alpha;
 }
 
+/*****************************************************************************/
+
+// normalize and set the time-component of the contravariant velocity //
 void set_ut(double ucon[NDIM], struct of_geom *geom)
 {
   double AA, BB, CC;
@@ -108,6 +130,9 @@ void set_ut(double ucon[NDIM], struct of_geom *geom)
   ucon[0] = (-BB - sqrt(discr))/(2.*AA);
 }
 
+/*****************************************************************************/
+
+// get primitiv variables //
 void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
 {
   static int firstc = 1;
@@ -183,6 +208,9 @@ void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
 
 }
 
+/*****************************************************************************/
+
+// initialize the bondi solution // 
 void init(struct GridGeom *G, struct FluidState *S)
 {
 
@@ -213,7 +241,12 @@ void init(struct GridGeom *G, struct FluidState *S)
   set_bounds(G, S);
 }
 
+/*****************************************************************************/
+
+// boundary condition for bondi accretion //
 void bound_gas_prob_x1r(int i, int j, int k, GridPrim  P, struct GridGeom *G)
 {
   get_prim_bondi(i, j, k, P, G);
 }
+
+/*****************************************************************************/

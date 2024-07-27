@@ -41,6 +41,9 @@ void set_units () {
   RHO_unit = M_unit*pow(L_unit,-3.);
   U_unit = RHO_unit*CL*CL;
 
+  /* magnetic fields */
+  B_unit = CL*sqrt(4.*M_PI*RHO_unit);
+
 }
 
 //******************************************************************************
@@ -88,6 +91,9 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   coord(i, j, k, CENT, X);
   bl_coord(X, &rad, &theta);
 
+  // get state //
+  get_state(G, Ss, i, j, k, CENT);
+
   /***********************************************************************/
   // number density, all in c.g.s unit //
 
@@ -102,11 +108,35 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /***********************************************************************/
 
+  // electron temperature //
+  double thetae = KBOL*t_elec/(ME*CL*CL); 
+ 
+  // get angular velocity //
+  double ang_vel = Ss->ucon[3][k][j][i]/Ss->ucon[0][k][j][i];
+  
+  // get coulumb coupling energy transfer rate //
+  double ue = (2*npost + nprot)*KBOL*t_elec/(gam - 1.);
+  double up = Ss->P[UU][k][j][i]*U_unit;
+  double thetap = (up*(gam - 1.)/nprot)/(MP*CL*CL);
+  double qcoul = coulomb_onezone(thetap, thetae, nprot, npost, i, j, k); // in cgs
+  double tcoul = fmin(fabs(ue/qcoul), fabs(up/qcoul));
+  double tomega = 1/fabs(ang_vel)*T_unit;
+  double tratio = tcoul/tomega;
+
+  // exit if the ratio is lower than threshold //
+  //if(tratio < tr_limit) {
+  //  printf("%.12e\n", tratio);
+  //  return;
+  //}
+  
+  /***********************************************************************/
+
   // optical depth and scale height //
   double tau_depth = 0;
   double h_th = 0;
 
   // direct integration of optical depth and scale height //
+#if COMPUTE == DIRECT
   /*--------------------------------------------------------------------------------------------*/
   // local variable storing integrand //
   int m_start, m_end;
@@ -143,21 +173,56 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   h_th = upper/lower*L_unit;
   tau_depth = (2*npost + nprot)*h_th*sigma_t;
 
+#elif COMPUTE == GAUSSIAN
   /*--------------------------------------------------------------------------------------------*/
+  // Note: need to find asymtopic
+
+  // local variables //
+  int j_mid;
+  double np, n_p, nt;
+  double t1, t2;
+  double dummy;
+
+  // calculate mid plane index //
+  j_mid = (int)((NG + N2 + NG)/2);
+
+  // mid plane number density //
+  np = Ss->P[RHO][k][j_mid][i]*RHO_unit/MP;
+  n_p = Ss->P[RPL][k][j_mid][i]*RHO_unit/ME;
+  nt = 2*n_p + np;
+
+  // upper atmosphere //
+  if(theta < M_PI_2) {
+    t1 = - M_PI_2/h_r;
+    t2 = (theta - M_PI_2)/h_r;
+  } else {
+    t1 = (theta - M_PI_2)/h_r;
+    t2 = M_PI_2/h_r;
+  }
+  if(fabs(t1) > 5 && fabs(t2) > 5){
+    dummy = -sqrt(M_PI)*(exp(t1*t1-t2*t2) - 1)/(exp(t1*t1-t2*t2)*series_asym(t2) - series_asym(t1));
+    h_th = sqrt(2/M_PI)*(rad*h_r)*dummy;
+  } else {
+    dummy = gsl_sf_erf(t2) - gsl_sf_erf(t1);
+    h_th = sqrt(2/M_PI)*(rad*h_r)*(exp(-t2*t2) - exp(-t1*t1))/(dummy);
+  }
+  h_th = fabs(h_th)*L_unit;
+  tau_depth = nt*h_th*sigma_t;
+
+  /*--------------------------------------------------------------------------------------------*/
+#endif
 
   /***********************************************************************/
 
-  // dimensionless temperature and postiron fraction //
-  double thetae = KBOL*t_elec/(ME*CL*CL); 
+  // postiron fraction //
   double zfrac = npost/nprot; 
 
   /***********************************************************************/
   /* now calculate pair production rate */
 
   // magnetic field strength //
-  get_state(G, Ss, i, j, k, CENT);
   double bsq = bsq_calc(Ss, i, j, k);
-  double bfield = sqrt(bfield);
+  double bfield = sqrt(bfield)*B_unit;
 
   // net pair production rate, note the rate is in the CGS unit!!! //
   double net_rate = ndot_net(zfrac, tau_depth, nprot, thetae, h_th, bfield);
@@ -756,23 +821,16 @@ inline double get_zfrac(double nprot, double thetae) {
 
 /* Coulomb coupling, stolen from ebhlight */
 /* Eventually, this subroutine should migrate back to electrons.c */
-inline double coulomb_onezone(struct FluidState *S, double thetae, double ue, int i, int j, int k)
+inline double coulomb_onezone(double thetap, double thetae, double nprot, double npost, int i, int j, int k)
 {
 
   /* note that I have changed some variable decleration */
   /* this subroutine needed to be contionusly udpated */
-  double rho = S->P[RHO][k][j][i];
-  double up = S->P[UU][k][j][i];
-  double np = rho*RHO_unit/MP;
-  double Tp = up*U_unit*(gam - 1.)/(np*KBOL);
-  double thetap = KBOL*Tp/(MP*CL*CL);
-  double thetam = 1./(1./thetae + 1./thetap);
   double logCoul = COULOMB_LOG;
+  double thetam = 1./(1./thetae + 1./thetap);
+  double Tp = thetap*ME*CL*CL/KBOL;
   double Te = thetae*ME*CL*CL/KBOL;
-
-  // Leon's patch, positron //
-  double rpl = S->P[RPL][k][j][i];
-  double npost = rpl*RHO_unit/ME;  
+  double nelec = npost + nprot;
 
   // Sanity checks, although electron fixup routine should catch these
   double Qc;
@@ -783,7 +841,7 @@ inline double coulomb_onezone(struct FluidState *S, double thetae, double ue, in
     // Get Coulomb heating rate.
     // Need to handle cases where thetap < 1e-2, Thetae < 1e-2, and both
     // Thetae and thetap < 1e-2 separately due to Bessel functions exploding
-    double prefac = 3./2.*ME/MP*npost*np*logCoul*CL*KBOL*sigma_t*(Tp - Te);
+    double prefac = 3./2.*ME/MP*(nelec + npost)*(nprot)*logCoul*CL*KBOL*sigma_t*(Tp - Te);
     double thetaCrit = 1.e-2;
     if (thetae < thetaCrit && thetap < thetaCrit) {
       term1 = sqrt(thetam/(M_PI*thetae*thetap/2.));                          
@@ -806,6 +864,8 @@ inline double coulomb_onezone(struct FluidState *S, double thetae, double ue, in
     Qc = 0;
   }
 
+  /* convert back to Code unit */
+  //Qc = Qc *  T_unit/U_unit;
   return Qc;
 }
 
@@ -822,5 +882,11 @@ inline double safe_Kn(int n, double x)
 }
 
 //******************************************************************************
+
+/* series expansion for error function */
+inline double series_asym(double x_in) {
+  double out = 1/x_in - 0.5/pow(x_in,3) + 0.75/pow(x_in,5) - 1.875/pow(x_in,7) + 6.5625/pow(x_in,9);
+  return out;
+}
 
 #endif

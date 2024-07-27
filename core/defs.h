@@ -23,7 +23,7 @@ GridPrim preserve_dU;
 #if POSITRONS
  GridDouble temp; // plasma temperature
 #endif
-#ifdef COOLING
+#if COOLING
  GridDouble omg_gr; // angular velocity 
 #endif
 
@@ -82,7 +82,7 @@ double R_isco;
 
 // Leon's patch, unit conversion //
 double M_unit, mbh; 
-double Mbh, L_unit, T_unit, RHO_unit, U_unit;
+double Mbh, L_unit, T_unit, RHO_unit, U_unit, B_unit;
 
 /*----------------------------------------*/
 

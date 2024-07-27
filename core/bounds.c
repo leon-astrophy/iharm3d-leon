@@ -333,7 +333,7 @@ void fix_flux(struct FluidFlux *F)
         F->X1[RHO][k][j][0+NG] = MY_MIN(F->X1[RHO][k][j][0+NG], 0.);
 
         /* Leon's patch, same treatment for positron */
-#ifdef POSITRONS
+#if POSITRONS
         F->X1[RPL][k][j][0+NG] = MY_MIN(F->X1[RPL][k][j][0+NG], 0.);
 #endif
       }
@@ -349,7 +349,7 @@ void fix_flux(struct FluidFlux *F)
         F->X1[RHO][k][j][N1+NG] = MY_MAX(F->X1[RHO][k][j][N1+NG], 0.);
         
         /* Leon's patch, same treatment for positron */
-#ifdef POSITRONS
+#if POSITRONS
         F->X1[RPL][k][j][N1+NG] = MY_MAX(F->X1[RPL][k][j][N1+NG], 0.);
 #endif
       }

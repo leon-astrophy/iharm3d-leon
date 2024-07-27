@@ -81,7 +81,7 @@
 #define POSITRONS 1
 
 // Leon's patch, include radiative cooling? //
-#define COOLING 1 
+#define COOLING 1
 
 // Leon's patch, quality factor //
 #define q_alpha (0.1)
@@ -376,7 +376,7 @@ extern GridPrim preserve_dU;
 /*------------------------------------------------------------*/
 
 // Leon's patch, extra variables for cooling/pair productions //
-#ifdef COOLING
+#if COOLING
   extern GridDouble omg_gr; // angular velocity 
 #endif
 
@@ -444,7 +444,7 @@ extern double R_isco;
 
 // Leon's patch, unit conversion //
 extern double M_unit, mbh; 
-extern double Mbh, L_unit, T_unit, RHO_unit, U_unit; 
+extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, B_unit; 
 
 /*------------------------------------------------------------*/
 

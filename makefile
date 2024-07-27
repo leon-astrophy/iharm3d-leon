@@ -5,7 +5,7 @@
 ##############################################################################
 
 # Problem to compile
-PROB = 
+PROB = pairs
 
 # Top directory of HDF5, or blank if using h5pcc
 HDF5_DIR =

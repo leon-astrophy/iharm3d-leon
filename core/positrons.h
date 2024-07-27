@@ -26,6 +26,14 @@
 // bisection threshold //
 #define bisects (1e-6)
 
+// threshold on coupling to orbital time scale //
+#define tr_limit (1e1)
+
+// computational method //
+#define DIRECT 1
+#define GAUSSIAN 2
+#define COMPUTE GAUSSIAN
+
 //******************************************************************************
 
 // Leon's patch, these are all physical untis //
@@ -85,7 +93,7 @@ double didx(double x, double A_in);
 double find_xs(double thetae, double nprot, double zfrac, double v0, double h_scale);
 double fraction(double x, double taut, double thetae);
 void find_ndots(double thetae, double taut, double nprot, double zfrac, double h_scale, double bfield, double *fs, double *ndots);
-double coulomb_onezone(struct FluidState *S, double thetae, double ue, int i, int j, int k);
+double coulomb_onezone(double thetap, double thetae, double nprot, double npost, int i, int j, int k);
 double safe_Kn(int n, double x); 
 
 //******************************************************************************
