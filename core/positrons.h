@@ -32,7 +32,7 @@
 // computational method //
 #define DIRECT 1
 #define GAUSSIAN 2
-#define COMPUTE GAUSSIAN
+#define COMPUTE DIRECT
 
 //******************************************************************************
 
