@@ -150,6 +150,10 @@
 #define WENO   (2)
 #define MP5    (3)
 
+// Riemann solvers //
+#define LF (0)
+#define HLLE (1)
+
 // *********************************************************** // 
 // Primitive and conserved variables
 #define RHO (0)

@@ -258,11 +258,26 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
   timer_start(TIMER_LR_FLUX);
 
   //interface fluxes, lax-friedrichs method
+  // Leon: tried to use HLLE //
 #pragma omp parallel for simd collapse(3)
   PLOOP {
     ZSLOOP(-1, N3, -1, N2, -1, N1) {
+#if RSOLVER == LF
       (*flux)[ip][k][j][i] = 0.5*((*fluxL)[ip][k][j][i] + (*fluxR)[ip][k][j][i] -
                (*ctop)[dir][k][j][i]*(Sr->U[ip][k][j][i] - Sl->U[ip][k][j][i]));
+#elif RSOLVER == HLLE
+      if (-(*cmin)[k][j][i] >= 0.0) {
+        (*flux)[ip][k][j][i] = (*fluxL)[ip][k][j][i];
+      } else if (-(*cmin)[k][j][i] <= 0.0 && (*cmax)[k][j][i] >= 0.0) {
+        (*flux)[ip][k][j][i] = ((*cmax)[k][j][i]*(*fluxL)[ip][k][j][i] + 
+                                (*cmin)[k][j][i]*(*fluxR)[ip][k][j][i] - 
+                                (*cmax)[k][j][i]*(*cmin)[k][j][i] * 
+                                (Sr->U[ip][k][j][i] - Sl->U[ip][k][j][i])) / 
+                                ((*cmax)[k][j][i] + (*cmin)[k][j][i]);
+      } else if ((*cmax)[k][j][i] <= 0.0) {
+        (*flux)[ip][k][j][i] = (*fluxR)[ip][k][j][i];
+      }
+#endif
     }
   }
   //count time

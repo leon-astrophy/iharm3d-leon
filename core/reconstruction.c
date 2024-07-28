@@ -8,6 +8,7 @@
 
 //include header files
 #include "decs.h"
+#include "math.h"
 
 //*************************************************************
 //TODO: All the reconstruction algo assumed equidistant mesh
@@ -180,6 +181,73 @@ inline void weno(double x1, double x2, double x3, double x4, double x5, double *
 
   *lout = vl[0]*wl[0] + vl[1]*wl[1] + vl[2]*wl[2];
   *rout = vr[0]*wr[0] + vr[1]*wr[1] + vr[2]*wr[2];
+}
+
+//*********************************************************************************************************************
+
+/* limiter */
+inline double mc(const double dm, const double dp, const double alpha) {
+  const double dc = (dm * dp > 0.0) * 0.5 * (dm + dp);
+  return copysign(fmin(fabs(dc), alpha * fmin(fabs(dm), fabs(dp))), dc);
+}
+
+/* weno-z stolen from KHARMA */
+inline void weno_z(double x1, double x2, double x3, double x4, double x5, double *lout, double *rout)
+{
+  double w5alpha[3][3] = {{1.0 / 3.0, -7.0 / 6.0, 11.0 / 6.0},
+                                  {-1.0 / 6.0, 5.0 / 6.0, 1.0 / 3.0},
+                                  {1.0 / 3.0, 5.0 / 6.0, -1.0 / 6.0}};
+  double w5gamma[3] = {0.1, 0.6, 0.3};
+  double eps = 1e-100;
+  double thirteen_thirds = 13.0 / 3.0;
+
+  double a = x1 - 2 * x2 + x3;
+  double b = x1 - 4.0 * x2 + 3.0 * x3;
+  double beta0 = thirteen_thirds * a * a + b * b + eps;
+  a = x2 - 2.0 * x3 + x4;
+  b = x4 - x2;
+  double beta1 = thirteen_thirds * a * a + b * b + eps;
+  a = x3 - 2.0 * x4 + x5;
+  b = x5 - 4.0 * x4 + 3.0 * x3;
+  double beta2 = thirteen_thirds * a * a + b * b + eps;
+  const double tau5 = fabs(beta2 - beta0);
+
+  beta0 = (beta0 + tau5) / beta0;
+  beta1 = (beta1 + tau5) / beta1;
+  beta2 = (beta2 + tau5) / beta2;
+
+  double w0 = w5gamma[0] * beta0 + eps;
+  double w1 = w5gamma[1] * beta1 + eps;
+  double w2 = w5gamma[2] * beta2 + eps;
+  double wsum = 1.0 / (w0 + w1 + w2);
+  *rout = w0 * (w5alpha[0][0] * x1 + w5alpha[0][1] * x2 + w5alpha[0][2] * x3);
+  *rout += w1 * (w5alpha[1][0] * x2 + w5alpha[1][1] * x3 + w5alpha[1][2] * x4);
+  *rout += w2 * (w5alpha[2][0] * x3 + w5alpha[2][1] * x4 + w5alpha[2][2] * x5);
+  *rout *= wsum;
+  const double alpha_r =
+      3.0 * wsum * w0 * w1 * w2 /
+          (w5gamma[2] * w0 * w1 + w5gamma[1] * w0 * w2 + w5gamma[0] * w1 * w2) +
+      eps;
+
+  w0 = w5gamma[0] * beta2 + eps;
+  w1 = w5gamma[1] * beta1 + eps;
+  w2 = w5gamma[2] * beta0 + eps;
+  wsum = 1.0 / (w0 + w1 + w2);
+  *lout = w0 * (w5alpha[0][0] * x5 + w5alpha[0][1] * x4 + w5alpha[0][2] * x3);
+  *lout += w1 * (w5alpha[1][0] * x4 + w5alpha[1][1] * x3 + w5alpha[1][2] * x2);
+  *lout += w2 * (w5alpha[2][0] * x3 + w5alpha[2][1] * x2 + w5alpha[2][2] * x1);
+  *lout *= wsum;
+  const double alpha_l =
+      3.0 * wsum * w0 * w1 * w2 /
+          (w5gamma[2] * w0 * w1 + w5gamma[1] * w0 * w2 + w5gamma[0] * w1 * w2) +
+      eps;
+
+  double dq = x4 - x3;
+  dq = mc(x3 - x2, dq, 2.0);
+
+  const double alpha_lin = 2.0 * alpha_r * alpha_l / (alpha_r + alpha_l);
+  *rout = alpha_lin * *rout + (1.0 - alpha_lin) * (x3 + 0.5 * dq);
+  *lout = alpha_lin * *lout + (1.0 - alpha_lin) * (x3 - 0.5 * dq);
 }
 
 //*********************************************************************************************************************

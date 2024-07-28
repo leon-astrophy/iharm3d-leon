@@ -45,6 +45,10 @@
  */
 #define RECONSTRUCTION WENO
 
+/* Riemann solver 
+ LF, HLLE */
+#define RSOLVER LF
+
 /* BOUNDARY CONDITIONS
  *   OUTFLOW PERIODIC POLAR USER
  * remark: x1r must be of USER */
