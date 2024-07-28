@@ -168,7 +168,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   tau_depth = (2.0*npost + nprot)*h_th*sigma_t;
 
   // direct integration of optical depth and scale height //
-#if COMPUTE == DIRECT_2
+#elif COMPUTE == DIRECT_2
   /*--------------------------------------------------------------------------------------------*/
   // local variable storing integrand //
   int m_start, m_end;
@@ -200,7 +200,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   }
 
   // scale height, remember change to CGS //
-  h_th = tau_depth/sigma_t/ntot
+  h_th = tau_depth/sigma_t/ntot;
 
 #elif COMPUTE == GAUSSIAN
   /*--------------------------------------------------------------------------------------------*/
@@ -235,7 +235,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   }
   tau_depth = fabs(nt*(h_r*rad*L_unit)*sqrt(M_PI_2)*dummy*sigma_t);
   tau_depth = fmin(tau_depth ,SMALL);
-  h_th = tau_depth/sigma_t/ntot
+  h_th = tau_depth/sigma_t/ntot;
 
   /*--------------------------------------------------------------------------------------------*/
 #endif

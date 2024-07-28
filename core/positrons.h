@@ -33,7 +33,7 @@
 #define GAUSSIAN 1
 #define DIRECT_1 2
 #define DIRECT_2 3
-#define COMPUTE DIRECT
+#define COMPUTE DIRECT_2
 
 //******************************************************************************
 
