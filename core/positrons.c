@@ -40,7 +40,7 @@ void set_units () {
   /* Now set the remaining unit */
   RHO_unit = M_unit*pow(L_unit,-3.0);
   U_unit = RHO_unit*CL*CL;
-
+  
   /* magnetic fields */
   B_unit = CL*sqrt(4.0*M_PI*RHO_unit);
 
@@ -265,6 +265,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       /* exit condition */
       if(o == 999 || isnan(fr)) {
         printf("Failure in implicit method\n");
+        exit(0);
         return;
       }
 

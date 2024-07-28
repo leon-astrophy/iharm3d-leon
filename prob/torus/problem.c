@@ -50,7 +50,7 @@ void set_problem_params() {
   // Leon's patch, Mass unit and black hole mass //
   set_param("M_unit", &M_unit);
   set_param("mbh", &mbh);
-
+  
   set_param("rin", &rin);
   set_param("rmax", &rmax);
   set_param("u_jitter", &u_jitter);

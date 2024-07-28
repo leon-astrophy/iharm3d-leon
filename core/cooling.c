@@ -127,7 +127,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   // compute cooling rate //
   /*-------------------------------------------------------*/
   // this is Noble 2009 approach //
-#if WHICHCOOLING == NOBLE
+#if WHICHCOOL == NOBLE
   double Be = (1 + eps_loc*gam)*u0; 
   if (Be > -1) {
     qdot_cool = pow(y_cool - 1.0 + fabs(y_cool - 1.0), q_cool);
@@ -135,7 +135,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   } else {
     qdot_cool = 0.0;
   }
-#elif WHICHPROBLEM == FRAGILE
+#elif WHICHCOOL == FRAGILE
   /*-------------------------------------------------------*/
   // this is Fragile 2012 approach //
   if (y_cool < 1.0) {
@@ -146,7 +146,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
     qdot_cool = y_cool - 1.0;
   }
   qdot_cool *= rho_loc*eps_loc*omg_gr[k][j][i];
-#elif WHICHPROBLEM == PRASUN
+#elif WHICHCOOL == PRASUN
   /*-------------------------------------------------------*/
   // This is Prasun Dhang's approach //
   

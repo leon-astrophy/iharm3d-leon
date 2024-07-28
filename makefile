@@ -24,6 +24,8 @@ SYSTEM_LIBDIR = /lib64
 # Try pointing this to h5pcc on your machine, before hunting down libraries
 CC=h5pcc
 
+#----------------------------------------------------------------------------------#
+
 # Example CFLAGS for going fast with GCC
 CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -funroll-loops -fopenmp 
 MATH_LIB = -lm
@@ -32,8 +34,12 @@ MATH_LIB = -lm
 #CFLAGS = -xCORE-AVX2 -Ofast -fstrict-aliasing -Wall -Werror -ipo -qopenmp
 #MATH_LIB =
 
+#----------------------------------------------------------------------------------#
+
 # Name of the executable
 EXE = harm
+
+#----------------------------------------------------------------------------------#
 
 # Override these defaults if we know the machine we're working with
 # Once you know what compiles, add it as a machine def here
@@ -108,6 +114,8 @@ ifneq ($(strip $(SYSTEM_LIBDIR)),)
 	LIBDIR += -L$(SYSTEM_LIBDIR)
 endif
 
+##############################################################################
+
 ## TARGETS ##
 
 .PRECIOUS: $(ARC_DIR)/$(EXE) $(ARC_DIR)/%
@@ -129,6 +137,7 @@ vtune: CFLAGS += -g -Wall -Werror
 vtune: CFLAGS += -debug inline-debug-info -shared-intel
 vtune: build
 
+##############################################################################
 
 clean:
 	@echo "Cleaning build files..."
@@ -142,11 +151,13 @@ cleandump:
 	@echo "Cleaning dump files..."
 	@rm -rf dumps
 
-cleanrest:
+cleanrst:
 	@echo "Cleaning restart files..."
 	@rm -rf restarts
 
 archive-invalidation: distclean
+
+##############################################################################
 
 $(EXE): $(ARC_DIR)/$(EXE)
 	@cp $(ARC_DIR)/$(EXE) .
@@ -165,3 +176,5 @@ $(ARC_DIR)/%: % | $(ARC_DIR)
 
 $(ARC_DIR):
 	@mkdir $(ARC_DIR)
+
+##############################################################################

@@ -36,9 +36,9 @@ void set_problem_params() {
 
 // write to header //
 void save_problem_data(hid_t string_type){
-        hdf5_write_single_val("bondi", "PROB", string_type);
-        hdf5_write_single_val(&mdot, "mdot", H5T_IEEE_F64LE);
-        hdf5_write_single_val(&rs, "rs", H5T_IEEE_F64LE);
+  hdf5_write_single_val("bondi", "PROB", string_type);
+  hdf5_write_single_val(&mdot, "mdot", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&rs, "rs", H5T_IEEE_F64LE);
 }
 
 /*****************************************************************************/
@@ -135,11 +135,14 @@ void set_ut(double ucon[NDIM], struct of_geom *geom)
 // get primitiv variables //
 void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
 {
+  // initialize the problem parameter //
   static int firstc = 1;
   if (firstc) {
+
+    // set adiabatic index n //
     n = 1./(gam - 1.);
 
-    // Solution constants
+    // uc - sonic point 4-velocity, Vc - sonic point sound speed //
     double uc = sqrt(1/(2.*rs));
     double Vc = sqrt(pow(uc,2)/(1. - 3.*pow(uc,2)));
     double Tc = -n*pow(Vc,2)/((n + 1.)*(n*pow(Vc,2) - 1.));
@@ -150,10 +153,12 @@ void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
     firstc = 0;
   }
 
+  // get coordinate //
   double r, th, X[NDIM];
   coord(i, j, k, CENT, X);
   bl_coord(X, &r, &th);
 
+  // skip the cells inside inner boundary //
   while (r < Rhor) {
     i++;
     coord(i, j, k, CENT, X);
@@ -168,27 +173,41 @@ void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
   double ucon_bl[NDIM], ucon_ks[NDIM], ucon_mks[NDIM];
   struct of_geom geom_bl;
 
+  //set metric tensors for Boyer-Lindquist coordinates // 
   blgset(i, j, &geom_bl);
 
+  // zero the 4-velocity //
   DLOOP1 {
     ucon_bl[mu] = 0.;
     ucon_ks[mu] = 0.;
     ucon_mks[mu] = 0.;
   }
+
+  // assign radial 4-velocity to the BL coordiante //
   ucon_bl[1] = ur;
 
+  // solve for time component //
   set_ut(ucon_bl, &geom_bl);
+
+  // convert from BL to KS //
   bl_to_ks(X, ucon_bl, ucon_ks);
 
+  // jacobian matrix //
   double dxdX[NDIM][NDIM], dXdx[NDIM][NDIM];
+
+  // set the jacobian matrix // 
   set_dxdX(X, dxdX);
   invert(&dxdX[0][0], &dXdx[0][0]);
+
+  // transform from KS to FMKS //
   DLOOP2 {
     ucon_mks[mu] += dXdx[mu][nu]*ucon_ks[nu];
   }
 
+  // convert from 4-velocity to 3-velocity //
   fourvel_to_prim(ucon_mks, P, G, i, j, k);
 
+  // assign primitive varibles //
   P[RHO][k][j][i] = rho;
   P[UU][k][j][i] = u;
   P[B1][k][j][i] = 0.;
@@ -214,17 +233,18 @@ void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
 void init(struct GridGeom *G, struct FluidState *S)
 {
 
+  // set the computational grid and print out //
   set_grid(G);
-
   LOG("Grid set");
 
+  // loop over to set the initial condition //
   ZLOOP {
     get_prim_bondi(i, j, k, S->P, G);
   }
 
+  // print out for debug //
   if (DEBUG && mpi_io_proc()) {
     printf("a = %e Rhor = %e\n", a, Rhor);
-
     printf("mdot = %e\n", mdot);
     printf("rs   = %e\n", rs);
     printf("n    = %e\n", n);
@@ -232,6 +252,7 @@ void init(struct GridGeom *G, struct FluidState *S)
     printf("C3   = %e\n", C3);
   }
 
+  // electrons //
 #if ELECTRONS
   init_electrons(G, S);
 #endif

@@ -47,7 +47,7 @@
 
 /* BOUNDARY CONDITIONS
  *   OUTFLOW PERIODIC POLAR USER
- */
+ * remark: x1r must be of USER */
 #define X1L_BOUND OUTFLOW
 #define X1R_BOUND USER
 #define X2L_BOUND POLAR
@@ -55,5 +55,6 @@
 #define X3L_BOUND PERIODIC
 #define X3R_BOUND PERIODIC
 
+/* remark: x1r must allow inflow */
 #define X1L_INFLOW 0
 #define X1R_INFLOW 1
