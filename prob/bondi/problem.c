@@ -21,7 +21,7 @@
 double C4, C3, n, K;
 
 // mass accretion rate and sonic radius //
-double mdot, rs;
+double mdot, rs, beta_tgrt;
 
 /*****************************************************************************/
 
@@ -30,6 +30,7 @@ void set_problem_params() {
   set_param("mdot", &mdot);
   set_param("rs", &rs);
   set_param("Rhor", &Rhor);
+  set_param("beta_tgrt", &beta_tgrt);
 }
 
 /*****************************************************************************/
@@ -260,6 +261,45 @@ void init(struct GridGeom *G, struct FluidState *S)
   //Enforce boundary conditions
   fixup(G, S);
   set_bounds(G, S);
+
+  // Leon's patch, setup magnetic field //
+#if BFIELD
+  ZLOOPALL {
+
+    // get coordinate //
+    double r, th, X[NDIM];
+    coord(i, j, k, CENT, X);
+    bl_coord(X, &r, &th);
+
+    // bipolar field //
+    if (th < M_PI_2) {
+      S->P[B1][k][j][i] = 1.0/r;
+    } else if (th > M_PI_2) {
+      S->P[B1][k][j][i] = -1.0/r;
+    } else {
+      S->P[B1][k][j][i] = 0.0;
+    }
+    
+    // get ucon, ucov, bcon, bcov
+    get_state(G, S, i, j, k, CENT);
+
+    // find bsquare at each grid
+    double bsq_ij = bsq_calc(S, i, j, k);
+
+    // find magnetization
+    double beta_ij = (gam - 1.)*(S->P[UU][k][j][i])/(0.5*(bsq_ij+SMALL)) ;
+
+    // normalization factor
+    double norm = sqrt(beta_ij / beta_tgrt);
+
+    // normailize the field //
+    S->P[B1][k][j][i] *= norm;
+    
+  }
+  fixup(G, S);
+  set_bounds(G, S);
+#endif
+
 }
 
 /*****************************************************************************/

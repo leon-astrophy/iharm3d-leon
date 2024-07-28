@@ -30,8 +30,9 @@
 #define tr_limit (1e1)
 
 // computational method //
-#define DIRECT 1
-#define GAUSSIAN 2
+#define GAUSSIAN 1
+#define DIRECT_1 2
+#define DIRECT_2 3
 #define COMPUTE DIRECT
 
 //******************************************************************************

@@ -105,6 +105,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   // calculate proton and positron numbe density, all in cgs //
   double nprot = Ss->P[RHO][k][j][i]*RHO_unit/MP;
   double npost = Ss->P[RPL][k][j][i]*RHO_unit/ME;
+  double ntot = 2*npost + nprot;
 
   /***********************************************************************/
 
@@ -122,12 +123,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double tcoul = fmin(fabs(ue/qcoul), fabs(up/qcoul));
   double tomega = 1.0/fabs(ang_vel)*T_unit;
   double tratio = tcoul/tomega;
-
-  // exit if the ratio is lower than threshold //
-  //if(tratio < tr_limit) {
-  //  printf("%.12e\n", tratio);
-  //  return;
-  //}
   
   /***********************************************************************/
 
@@ -136,7 +131,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double h_th = 0.0;
 
   // direct integration of optical depth and scale height //
-#if COMPUTE == DIRECT
+#if COMPUTE == DIRECT_1
   /*--------------------------------------------------------------------------------------------*/
   // local variable storing integrand //
   int m_start, m_end;
@@ -164,7 +159,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
     n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
     nt = 2*n_p + np;
-    //tau_depth = tau_depth + nt*sqrt(G->gcov[CENT][2][2][m][i])*dx[2]*L_unit*sigma_t;
     upper = upper + nt*fabs(th_loc - M_PI_2)*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
     lower = lower + nt*G->gdet[CENT][m][i]*dx[2];
   }
@@ -172,6 +166,41 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   // scale height, remember change to CGS //
   h_th = upper/lower*L_unit;
   tau_depth = (2.0*npost + nprot)*h_th*sigma_t;
+
+  // direct integration of optical depth and scale height //
+#if COMPUTE == DIRECT_2
+  /*--------------------------------------------------------------------------------------------*/
+  // local variable storing integrand //
+  int m_start, m_end;
+  double np, n_p, nt, th_loc;
+  double upper = 0.0;
+  double lower = 0.0; 
+  double dummy;
+
+  // integrate optical depth and scale height //
+  // they are all in the C.G.S unit //
+  if(theta < M_PI_2) {
+    // upper hemisphere //
+    m_start = NG;
+    m_end = j;
+  } else {
+    // lower hemispehere
+    m_start = j;
+    m_end = N2 + NG;
+  }
+
+  /* sum over */
+  for (int m = m_start; m <= m_end; m++) {
+    coord(i, m, k, CENT, X);
+    bl_coord(X, &dummy, &th_loc);
+    np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
+    n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
+    nt = 2*n_p + np;
+    tau_depth = tau_depth + nt*(sqrt(G->gcov[CENT][2][2][m][i])*dx[2])*L_unit*sigma_t;
+  }
+
+  // scale height, remember change to CGS //
+  h_th = tau_depth/sigma_t/ntot
 
 #elif COMPUTE == GAUSSIAN
   /*--------------------------------------------------------------------------------------------*/
@@ -193,21 +222,20 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // upper atmosphere //
   if(theta < M_PI_2) {
-    t1 = - M_PI_2/h_r;
-    t2 = (theta - M_PI_2)/h_r;
+    t1 = - M_PI_2/h_r/sqrt(2);
+    t2 = (theta - M_PI_2)/h_r/sqrt(2);
   } else {
-    t1 = (theta - M_PI_2)/h_r;
-    t2 = M_PI_2/h_r;
+    t1 = (theta - M_PI_2)/h_r/sqrt(2);
+    t2 = M_PI_2/h_r/sqrt(2);
   }
   if(fabs(t1) > 5.0 && fabs(t2) > 5.0){
-    dummy = -sqrt(M_PI)*(exp(t1*t1-t2*t2) - 1.0)/(exp(t1*t1-t2*t2)*series_asym(t2) - series_asym(t1));
-    h_th = sqrt(2.0/M_PI)*(rad*h_r)*dummy;
+    dummy = series_asym(t2) - series_asym(t1);
   } else {
     dummy = gsl_sf_erf(t2) - gsl_sf_erf(t1);
-    h_th = sqrt(2.0/M_PI)*(rad*h_r)*(exp(-t2*t2) - exp(-t1*t1))/(dummy);
   }
-  h_th = fabs(h_th)*L_unit;
-  tau_depth = nt*h_th*sigma_t;
+  tau_depth = fabs(nt*(h_r*rad*L_unit)*sqrt(M_PI_2)*dummy*sigma_t);
+  tau_depth = fmin(tau_depth ,SMALL);
+  h_th = tau_depth/sigma_t/ntot
 
   /*--------------------------------------------------------------------------------------------*/
 #endif
