@@ -21,13 +21,13 @@
 double C4, C3, n, K;
 
 // mass accretion rate and sonic radius //
-double mdot, rs, beta_tgrt;
+double mdots, rs, beta_tgrt;
 
 /*****************************************************************************/
 
 // load from the parameter file //
 void set_problem_params() {
-  set_param("mdot", &mdot);
+  set_param("mdots", &mdots);
   set_param("rs", &rs);
   set_param("Rhor", &Rhor);
   set_param("beta_tgrt", &beta_tgrt);
@@ -38,7 +38,7 @@ void set_problem_params() {
 // write to header //
 void save_problem_data(hid_t string_type){
   hdf5_write_single_val("bondi", "PROB", string_type);
-  hdf5_write_single_val(&mdot, "mdot", H5T_IEEE_F64LE);
+  hdf5_write_single_val(&mdots, "mdots", H5T_IEEE_F64LE);
   hdf5_write_single_val(&rs, "rs", H5T_IEEE_F64LE);
 }
 
@@ -149,7 +149,7 @@ void get_prim_bondi(int i, int j, int k, GridPrim P, struct GridGeom *G)
     double Tc = -n*pow(Vc,2)/((n + 1.)*(n*pow(Vc,2) - 1.));
     C4 = uc*pow(rs,2)*pow(Tc,n);
     C3 = pow(1. + (1. + n)*Tc,2)*(1. - 2./rs + pow(uc, 2));
-		K  = pow(4*M_PI*C4 / mdot, 1/n);
+		K  = pow(4*M_PI*C4 / mdots, 1/n);
 
     firstc = 0;
   }
@@ -246,7 +246,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   // print out for debug //
   if (DEBUG && mpi_io_proc()) {
     printf("a = %e Rhor = %e\n", a, Rhor);
-    printf("mdot = %e\n", mdot);
+    printf("mdots = %e\n", mdots);
     printf("rs   = %e\n", rs);
     printf("n    = %e\n", n);
     printf("C4   = %e\n", C4);

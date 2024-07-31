@@ -31,11 +31,11 @@
 [dbl] tptemax = 1000.0
 
 # PROBLEM parameter #
-# mdot - mass accretion rate
+# mdots - mass accretion rate
 # rs - sonic radius #
 # Rhor - inner boundary #
 # beta_tgrt - plasma beta #
-[dbl] mdot = 4.9672941328980516
+[dbl] mdots = 4.9672941328980516
 [dbl] rs = 5.0
 [dbl] Rhor = 2.1
 [dbl] beta_tgrt = 300.0

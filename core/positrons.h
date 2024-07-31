@@ -27,13 +27,7 @@
 #define bisects (1e-6)
 
 // threshold on coupling to orbital time scale //
-#define tr_limit (1e1)
-
-// computational method //
-#define GAUSSIAN 1
-#define DIRECT_1 2
-#define DIRECT_2 3
-#define COMPUTE DIRECT_2
+#define tr_limit (1e0)
 
 //******************************************************************************
 

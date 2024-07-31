@@ -123,6 +123,11 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double tcoul = fmin(fabs(ue/qcoul), fabs(up/qcoul));
   double tomega = 1.0/fabs(ang_vel)*T_unit;
   double tratio = tcoul/tomega;
+
+  // do not compute pair production for the "disk" //
+  if(tratio < tr_limit){
+    return;
+  }
   
   /***********************************************************************/
 
@@ -130,95 +135,13 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double tau_depth = 0.0;
   double h_th = 0.0;
 
-  // direct integration of optical depth and scale height //
-#if COMPUTE == DIRECT_1
   /*--------------------------------------------------------------------------------------------*/
-  // local variable storing integrand //
-  int m_start, m_end;
-  double np, n_p, nt, th_loc;
-  double upper = 0.0;
-  double lower = 0.0; 
-  double dummy;
-
-  // integrate optical depth and scale height //
-  // they are all in the C.G.S unit //
-  if(theta < M_PI_2) {
-    // upper hemisphere //
-    m_start = NG;
-    m_end = j;
-  } else {
-    // lower hemispehere
-    m_start = j;
-    m_end = N2 + NG;
-  }
-
-  /* sum over */
-  for (int m = m_start; m <= m_end; m++) {
-    coord(i, m, k, CENT, X);
-    bl_coord(X, &dummy, &th_loc);
-    np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
-    n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-    nt = 2*n_p + np;
-    upper = upper + nt*fabs(th_loc - M_PI_2)*G->gdet[CENT][m][i]*sqrt(G->gcov[CENT][2][2][m][i])*dx[2];
-    lower = lower + nt*G->gdet[CENT][m][i]*dx[2];
-  }
-
-  // scale height, remember change to CGS //
-  h_th = upper/lower*L_unit;
-  tau_depth = (2.0*npost + nprot)*h_th*sigma_t;
-
-  // direct integration of optical depth and scale height //
-#elif COMPUTE == DIRECT_2
-  /*--------------------------------------------------------------------------------------------*/
-  // local variable storing integrand //
-  int m_start, m_end;
-  double np, n_p, nt, th_loc;
-  double upper = 0.0;
-  double lower = 0.0; 
-  double dummy;
-
-  // integrate optical depth and scale height //
-  // they are all in the C.G.S unit //
-  if(theta < M_PI_2) {
-    // upper hemisphere //
-    m_start = NG;
-    m_end = j;
-  } else {
-    // lower hemispehere
-    m_start = j;
-    m_end = N2 + NG;
-  }
-
-  /* sum over */
-  for (int m = m_start; m <= m_end; m++) {
-    coord(i, m, k, CENT, X);
-    bl_coord(X, &dummy, &th_loc);
-    np = Ss->P[RHO][k][m][i]*RHO_unit/MP;
-    n_p = Ss->P[RPL][k][m][i]*RHO_unit/ME;
-    nt = 2*n_p + np;
-    tau_depth = tau_depth + nt*(sqrt(G->gcov[CENT][2][2][m][i])*dx[2])*L_unit*sigma_t;
-  }
-
-  // scale height, remember change to CGS //
-  h_th = tau_depth/sigma_t/ntot;
-
-#elif COMPUTE == GAUSSIAN
-  /*--------------------------------------------------------------------------------------------*/
-  // Note: need to find asymtopic
 
   // local variables //
   int j_mid;
   double np, n_p, nt;
   double t1, t2;
   double dummy;
-
-  // calculate mid plane index //
-  j_mid = (int)((NG + N2 + NG)/2);
-
-  // mid plane number density //
-  np = Ss->P[RHO][k][j_mid][i]*RHO_unit/MP;
-  n_p = Ss->P[RPL][k][j_mid][i]*RHO_unit/ME;
-  nt = 2.0*n_p + np;
 
   // upper atmosphere //
   if(theta < M_PI_2) {
@@ -233,12 +156,9 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   } else {
     dummy = gsl_sf_erf(t2) - gsl_sf_erf(t1);
   }
-  tau_depth = fabs(nt*(h_r*rad*L_unit)*sqrt(M_PI_2)*dummy*sigma_t);
+  tau_depth = fabs(ntot*(h_r*rad*L_unit)*sqrt(M_PI_2)*dummy*sigma_t);
   tau_depth = fmin(tau_depth ,SMALL);
   h_th = tau_depth/sigma_t/ntot;
-
-  /*--------------------------------------------------------------------------------------------*/
-#endif
 
   /***********************************************************************/
 
