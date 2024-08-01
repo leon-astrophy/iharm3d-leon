@@ -137,28 +137,11 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /*--------------------------------------------------------------------------------------------*/
 
-  // local variables //
-  int j_mid;
-  double np, n_p, nt;
-  double t1, t2;
-  double dummy;
-
-  // upper atmosphere //
-  if(theta < M_PI_2) {
-    t1 = - M_PI_2/h_r/sqrt(2);
-    t2 = (theta - M_PI_2)/h_r/sqrt(2);
-  } else {
-    t1 = (theta - M_PI_2)/h_r/sqrt(2);
-    t2 = M_PI_2/h_r/sqrt(2);
-  }
-  if(fabs(t1) > 5.0 && fabs(t2) > 5.0){
-    dummy = series_asym(t2) - series_asym(t1);
-  } else {
-    dummy = gsl_sf_erf(t2) - gsl_sf_erf(t1);
-  }
-  tau_depth = fabs(ntot*(h_r*rad*L_unit)*sqrt(M_PI_2)*dummy*sigma_t);
-  tau_depth = fmin(tau_depth ,SMALL);
-  h_th = tau_depth/sigma_t/ntot;
+  // sound speed, local approximation //
+  double cs = sqrt(gam*(gam - 1.0)*Ss->P[UU][k][j][i]/(Ss->P[RHO][k][j][i] + gam*Ss->P[UU][k][j][i]));
+  h_th = (cs/fabs(ang_vel))*L_unit;
+  tau_depth = h_th*ntot*sigma_t;
+  //printf("%.12e\t%.12e\n", tau_depth, h_th);
 
   /***********************************************************************/
 
