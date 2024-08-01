@@ -1,4 +1,9 @@
-### RUNTIME PARAMETERS for bondi accretion problem ###
+#------------------------------------------------------------------
+
+### RUNTIME PARAMETERS for spherical accretion problem ###
+
+#------------------------------------------------------------------
+# these are essentials
 
 # COORDINATES: finaltime, dt, and outer boundaries
 [dbl] tf = 1.0e4
@@ -30,6 +35,9 @@
 [dbl] tptemin = 0.001
 [dbl] tptemax = 1000.0
 
+#------------------------------------------------------------------
+# these are problem dependent
+
 # PROBLEM parameter #
 # rho_inf - density at infinity
 # r_bondi - bondi radius
@@ -38,3 +46,4 @@
 [dbl] r_bondi = 1.0e3
 [dbl] beta_inf = 300.0
 
+#------------------------------------------------------------------

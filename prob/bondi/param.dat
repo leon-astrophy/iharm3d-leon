@@ -1,4 +1,9 @@
+#------------------------------------------------------------------
+
 ### RUNTIME PARAMETERS for bondi accretion problem ###
+
+#------------------------------------------------------------------
+# these are essentials
 
 # COORDINATES: finaltime, dt, and outer boundaries
 [dbl] tf = 50.0
@@ -30,6 +35,9 @@
 [dbl] tptemin = 0.001
 [dbl] tptemax = 1000.0
 
+#------------------------------------------------------------------
+# these are problem dependent
+
 # PROBLEM parameter #
 # mdots - mass accretion rate
 # rs - sonic radius #
@@ -40,3 +48,4 @@
 [dbl] Rhor = 2.1
 [dbl] beta_tgrt = 300.0
 
+#------------------------------------------------------------------

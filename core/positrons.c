@@ -141,7 +141,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   double cs = sqrt(gam*(gam - 1.0)*Ss->P[UU][k][j][i]/(Ss->P[RHO][k][j][i] + gam*Ss->P[UU][k][j][i]));
   h_th = (cs/fabs(ang_vel))*L_unit;
   tau_depth = h_th*ntot*sigma_t;
-  //printf("%.12e\t%.12e\n", tau_depth, h_th);
 
   /***********************************************************************/
 
@@ -252,6 +251,10 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     
     }
     /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
+
+    // limit the positron fractions by the thermal equilibrium condition //
+    double zmax = get_zfrac(nprot, thetae);
+    npost = fmin(npost, nprot*zmax);
 
     // update positron mass //
     Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
@@ -811,14 +814,6 @@ inline double safe_Kn(int n, double x)
   } else {
     return gsl_sf_bessel_Kn(n, x);
   }
-}
-
-//******************************************************************************
-
-/* series expansion for error function */
-inline double series_asym(double x_in) {
-  double out = 1.0/x_in - 0.5/pow(x_in,3.0) + 0.75/pow(x_in,5.0) - 1.875/pow(x_in,7.0) + 6.5625/pow(x_in,9.0);
-  return out;
 }
 
 #endif
