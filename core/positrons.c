@@ -173,12 +173,14 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
       /* left state */
       double zl = zfrac;
-      double ndotl = ndot_net(zl, tau_depth, nprot, thetae, h_th, bfield);
+      double n_l = (2.0*zl+1.0)*nprot;
+      double tau_l = h_th*n_l*sigma_t;
+      double ndotl = ndot_net(zl, tau_l, nprot, thetae, h_th, bfield);
       double fl = (zl - zfrac) - dt_real*ndotl/nprot;
 
       /* right state */
       int o;
-      double zr, ndotr, fr, steps;
+      double zr, n_r, tau_r, ndotr, fr, steps;
       if(net_rate > 0.0) {
         steps = 10.0;
       } else{
@@ -186,7 +188,9 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       }
       zr = zl;
       for (o = 0; o < 999; o++) {
-        ndotr = ndot_net(zr, tau_depth, nprot, thetae, h_th, bfield);
+        n_r = (2.0*zr+1.0)*nprot;
+        tau_r = h_th*n_r*sigma_t;
+        ndotr = ndot_net(zr, tau_r, nprot, thetae, h_th, bfield);
         fr = (zr - zfrac) - dt_real*ndotr/nprot;
         if(fr*fl < 0.0) break;
         zr = zr*steps;
@@ -200,7 +204,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
       }
 
       /* define the center state */
-      double zcen, fcen, zcen_old, ndotcen;
+      double zcen, n_cen, tau_cen, fcen, zcen_old, ndotcen;
 
       /* bisection method counting */
       int count;
@@ -215,7 +219,9 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
         /* center state */
         zcen = 0.5*(zl + zr);
-        ndotcen = ndot_net(zcen, tau_depth, nprot, thetae, h_th, bfield);
+        n_cen = (2.0*zcen+1.0)*nprot;
+        tau_cen = h_th*n_cen*sigma_t;
+        ndotcen = ndot_net(zcen, tau_cen, nprot, thetae, h_th, bfield);
         fcen = (zcen - zfrac) - dt_real*ndotcen/nprot;
         
         /* check the sign */
