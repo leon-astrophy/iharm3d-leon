@@ -379,9 +379,10 @@ extern GridPrim preserve_dU;
 
 /*------------------------------------------------------------*/
 
-// Leon's patch, extra variables for cooling/pair productions //
+// Leon's patch, extra variables for cooling //
 #if COOLING
   extern GridDouble omg_gr; // angular velocity 
+  extern GridDouble t_gr; // target temperature
 #endif
 
 /*------------------------------------------------------------*/

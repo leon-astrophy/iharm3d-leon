@@ -100,7 +100,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   double cs_inf = sqrt(2.0/r_bondi);
 
   // compute pressure at infinity 
-  double p_inf = rho_inf*cs_inf*cs_inf/gam;
+  double p_inf = rho_inf/gam*((gam - 1.0)*cs_inf*cs_inf)/(gam - 1.0 - cs_inf*cs_inf);
 
   // loop over to set the initial condition //
   ZLOOP {

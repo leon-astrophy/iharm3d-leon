@@ -6,9 +6,9 @@
 # these are essentials
 
 # COORDINATES: finaltime, dt, and outer boundaries
-[dbl] tf = 1.0e4
+[dbl] tf = 1.0e3
 [dbl] dt = 1.0e-06
-[dbl] Rout = 1.0e4
+[dbl] Rout = 1.0e3
 
 # GEOMETRY: BH spins, and MMKS stuff
 [dbl] a = 0.0
@@ -42,8 +42,8 @@
 # rho_inf - density at infinity
 # r_bondi - bondi radius
 # beta_inf - plasma beta at infinity 
-[dbl] rho_inf = 1e-4
-[dbl] r_bondi = 1.0e3
+[dbl] rho_inf = 0.00538136783519545
+[dbl] r_bondi = 191.67222102346147
 [dbl] beta_inf = 300.0
 
 #------------------------------------------------------------------

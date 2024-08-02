@@ -6,7 +6,7 @@
 # these are essentials
 
 # COORDINATES: finaltime, dt, and outer boundaries
-[dbl] tf = 50.0
+[dbl] tf = 1.0e3
 [dbl] dt = 1.0e-06
 [dbl] Rout = 20.0
 
@@ -18,7 +18,7 @@
 [dbl] poly_alpha = 14.0
 
 # FLUID, adibatic index and cfl number #
-[dbl] gam = 1.666667
+[dbl] gam = 1.44444444444
 [dbl] cour = 0.7
 
 # OUTPUT: frequecies
@@ -43,8 +43,8 @@
 # rs - sonic radius #
 # Rhor - inner boundary #
 # beta_tgrt - plasma beta #
-[dbl] mdots = 4.9672941328980516
-[dbl] rs = 5.0
+[dbl] mdots = 9.363968128545602
+[dbl] rs = 20.0
 [dbl] Rhor = 2.1
 [dbl] beta_tgrt = 300.0
 

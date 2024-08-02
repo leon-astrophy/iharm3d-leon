@@ -22,6 +22,9 @@ void init_cooling(struct GridGeom *G)
 {
   ZLOOP {
 
+    // correction factor //
+    double R_z;
+
     // coordinate //
     double rad, theta, X[NDIM];
 
@@ -33,7 +36,24 @@ void init_cooling(struct GridGeom *G)
     if (rad > R_isco){
 
       // outside isco //
-      omg_gr[k][j][i] = 1.0/(pow(rad,1.5) + a);  
+      double omg = 1.0/(pow(rad,1.5) + a);
+      omg_gr[k][j][i] = omg;  
+
+      // metrics along equator //
+      double g_00 = -(1.0 - 2.0 / rad);
+      double g_03 = -2.0*a / rad;
+      double g_33 = pow(rad,2.0) + pow(a,2.0) + 2.0*pow(a,2.0) / rad;
+
+      // calculate 4-velocity, assumign circular orbit, along equator //
+      double ut = sqrt(fabs(-1.0/(g_00 + 2.0*g_03*omg + g_33*omg*omg)));
+      double uphi = omg*ut;
+
+      // lower the index //
+      double u_t = g_00*ut + g_03*uphi;
+      double u_phi = g_03*ut + g_33*uphi;
+
+      // compute correction factor //
+      R_z = (u_phi*u_phi - a*a*(u_t*u_t - 1.0))/rad;
 
     } else {
     
@@ -61,9 +81,17 @@ void init_cooling(struct GridGeom *G)
       double u3 = g13 * u_1_isco + g33 * u_3_isco;
       omg_gr[k][j][i] = u3 / u0;
 
+      // compute correction factor //
+      R_z = (u_3_isco*u_3_isco - a*a*(u_0_isco*u_0_isco - 1.0))/rad;
+
     }
-  
+    
+    // target temperature //
+    t_gr[k][j][i] = M_PI_2*pow(h_r*rad*omg_gr[k][j][i],2);
+    //t_gr[k][j][i] = M_PI_2*(R_z/rad)*h_r*h_r;
+
   }
+  exit(0);
 }
 
 //******************************************************************************
@@ -88,10 +116,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
 {
   // define 4-velocity 
   double u0, u1, u2, u3; 
-
-  // target temperature //
-  double tstar;
-
+  
   // coordinate //
   double rad, theta, X[NDIM];
 
@@ -118,11 +143,8 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   // assign density and internal energy //
   rho_loc = Ss->P[RHO][k][j][i], eps_loc = Ss->P[UU][k][j][i]/Ss->P[RHO][k][j][i];
 
-  // assign temperature //
-  tstar = M_PI_2*pow(h_r*rad*omg_gr[k][j][i],2);
-
   // assign cooling parameter //
-  y_cool = (gam - 1.0)*eps_loc/tstar;
+  y_cool = (gam - 1.0)*eps_loc/t_gr[k][j][i];
 
   // compute cooling rate //
   /*-------------------------------------------------------*/
