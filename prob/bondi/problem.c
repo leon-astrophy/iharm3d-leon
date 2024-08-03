@@ -18,10 +18,10 @@
 /*****************************************************************************/
 
 // some variabls //
-double C4, C3, n, K;
+static double C4, C3, n, K;
 
 // mass accretion rate and sonic radius //
-double mdots, rs, beta_tgrt;
+static double mdots, rs, beta_tgrt;
 
 /*****************************************************************************/
 

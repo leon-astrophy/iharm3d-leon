@@ -146,9 +146,11 @@
 
 // Reconstruction algorithms
 #define LINEAR (0)
-#define PPM    (1)
-#define WENO   (2)
-#define MP5    (3)
+#define WENO   (1)
+#define MP5    (2)
+#define PPM    (3)
+#define PPMX   (4)
+#define WENOZ  (5)
 
 // Riemann solvers //
 #define LF (0)
@@ -309,9 +311,9 @@
 // Leon's patch, extra timers //
 #if POSITRONS || COOLING
 #undef NUM_TIMERS
-#define NUM_TIMERS (30)
+#define NUM_TIMERS        (30)
 #define TIMER_POSITRON    (29)
-#define TIMER_COOLING    (28)
+#define TIMER_COOLING     (28)
 #endif
 
 //*******************************************************************************
@@ -591,9 +593,11 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S);
 double get_flux(struct GridGeom *G, struct FluidState *S, struct FluidFlux *F);
 void flux_ct(struct FluidFlux *F);
 
-/////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//
 // hdf5_utils.c has its own header
-/////////////////////////////////////
+//
+///////////////////////////////////////////////////////////////////////
 
 // io.c
 void init_io();
@@ -647,14 +651,14 @@ void read_params(char *pfname);
 // phys.c
 void prim_to_flux(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int dir, int loc, GridPrim flux);
 void prim_to_flux_vec(struct GridGeom *G, struct FluidState *S, int dir,
-  int loc, int kstart, int kstop, int jstart, int jstop, int istart, int istop, GridPrim flux);
+int loc, int kstart, int kstop, int jstart, int jstop, int istart, int istop, GridPrim flux);
 void bcon_calc(struct FluidState *S, int i, int j, int k);
 void mhd_calc(struct FluidState *S, int i, int j, int k, int dir, double *mhd);
 void get_fluid_source(struct GridGeom *G, struct FluidState *S, GridPrim *dU);
 double bsq_calc(struct FluidState *S, int i, int j, int k);
 void get_state(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 void get_state_vec(struct GridGeom *G, struct FluidState *S, int loc,
-  int kstart, int kstop, int jstart, int jstop, int istart, int istop);
+int kstart, int kstop, int jstart, int jstop, int istart, int istop);
 void ucon_calc(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 double mhd_gamma_calc(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 void mhd_vchar(struct GridGeom *G, struct FluidState *Sr, int i, int j, int k, int loc, int dir, GridDouble cmax, GridDouble cmin);

@@ -18,7 +18,7 @@
 // declare
 static gsl_rng *rng;
 
-// Local declarations
+// Local declarations of functions 
 double lfish_calc(double rmax);
 
 // Different MAD initializations
@@ -604,4 +604,6 @@ double lfish_calc(double r)
        (pow(a, 2) + (-2. + r) * r))
       );
 }
+
+//******************************************************************************
 

@@ -42,8 +42,10 @@
 # rho_inf - density at infinity
 # r_bondi - bondi radius
 # beta_inf - plasma beta at infinity 
+# m_0 - bend of the field
 [dbl] rho_inf = 0.00538136783519545
 [dbl] r_bondi = 191.67222102346147
 [dbl] beta_inf = 300.0
+[dbl] m_0 = 0.1
 
 #------------------------------------------------------------------
