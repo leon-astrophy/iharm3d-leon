@@ -37,7 +37,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   double X[NDIM];
 
   /* loop over */
-  ZLOOPALL {
+  ZLOOP {
 
     /* find coordiantes */
     coord(i, j, k, CENT, X);

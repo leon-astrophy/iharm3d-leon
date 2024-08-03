@@ -129,7 +129,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   /*-----------------------------------------------------------------------------------------*/
 
   // loop over //
-  ZSLOOP(-1, N3, -1, N2, -1, N1) {
+  ZLOOP {
 
     // get r and theta, same between BL and FMKS //
     double X[NDIM];
