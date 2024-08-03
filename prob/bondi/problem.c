@@ -21,7 +21,7 @@
 static double C4, C3, n, K;
 
 // mass accretion rate and sonic radius //
-static double mdots, rs, beta_tgrt;
+static double mdots, rs;
 
 /*****************************************************************************/
 
@@ -30,7 +30,6 @@ void set_problem_params() {
   set_param("mdots", &mdots);
   set_param("rs", &rs);
   set_param("Rhor", &Rhor);
-  set_param("beta_tgrt", &beta_tgrt);
 }
 
 /*****************************************************************************/

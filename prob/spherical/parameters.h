@@ -64,4 +64,4 @@
 #define X1R_INFLOW 1
 
 /* Leon's patch, include magnetic field? */
-#define BFIELD 1
+#define BFIELD 0

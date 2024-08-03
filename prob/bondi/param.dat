@@ -42,10 +42,8 @@
 # mdots - mass accretion rate
 # rs - sonic radius #
 # Rhor - inner boundary #
-# beta_tgrt - plasma beta #
 [dbl] mdots = 9.363968128545602
 [dbl] rs = 20.0
 [dbl] Rhor = 2.1
-[dbl] beta_tgrt = 300.0
 
 #------------------------------------------------------------------

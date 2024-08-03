@@ -22,7 +22,7 @@
 static double rho_inf, r_bondi, p_inf;
 
 // for magnetic field //
-static double m_0, beta_inf;
+static double m_0, beta_norm;
 
 /*****************************************************************************/
 
@@ -30,7 +30,7 @@ static double m_0, beta_inf;
 void set_problem_params() {
   set_param("rho_inf", &rho_inf);
   set_param("r_bondi", &r_bondi);
-  set_param("beta_inf", &beta_inf);
+  set_param("beta_norm", &beta_norm);
   set_param("m_0", &m_0);
 }
 
@@ -203,7 +203,7 @@ void init(struct GridGeom *G, struct FluidState *S)
   LOGN("beta is %.10e", beta_act);
 
   // normalization factor
-  norm = sqrt(beta_act / beta_inf);
+  norm = sqrt(beta_act / beta_norm);
 
   // Apply normalization to magnetic fields, B3 is uniformly 0
   LOGN("Normalization is %f\n", norm);
