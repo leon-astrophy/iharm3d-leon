@@ -145,12 +145,15 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
 
   // assign cooling parameter //
   y_cool = (gam - 1.0)*eps_loc/t_gr[k][j][i];
+  
+  // also bsqaure //
+  double bsq = bsq_calc(Ss, i, j, k);
 
   // compute cooling rate //
   /*-------------------------------------------------------*/
   // this is Noble 2009 approach //
 #if WHICHCOOL == NOBLE
-  double Be = (1 + eps_loc*gam)*u0; 
+  double Be = u0*(eps_loc*gam + bsq); 
   if (Be > -1) {
     qdot_cool = pow(y_cool - 1.0 + fabs(y_cool - 1.0), q_cool);
     qdot_cool *= s_cool*omg_gr[k][j][i]*rho_loc*eps_loc;
@@ -190,6 +193,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
   double duudt = -qdot_cool* G->gdet[CENT][j][i]*u0, du1dt = -qdot_cool* G->gdet[CENT][j][i]*u1;
   double du2dt = -qdot_cool* G->gdet[CENT][j][i]*u2, du3dt = -qdot_cool* G->gdet[CENT][j][i]*u3;
 
+#if LIMITCOOL
   // control the cooling to avoid numerical instability //
   if(fabs(duudt) > 0.0) {
     double quu = fabs(Ss->U[UU][k][j][i]/duudt);
@@ -219,6 +223,7 @@ inline void rad_cooling_1zone(struct GridGeom *G,struct FluidState *Ss, struct F
       printf("du3dt too steep %d %d %d\n", i, j, k);
     }
   }
+#endif
 
   // Tab = Tab - (-g)^(1/2) ub qdot dt
   Sf->U[UU][k][j][i] += duudt, Sf->U[U1][k][j][i] += du1dt;

@@ -83,6 +83,9 @@
 // Leon's patch, include radiative cooling? //
 #define COOLING 1
 
+// Leon's patch, evolve the vector potential? //
+#define VECPOT 0
+
 // Leon's patch, quality factor //
 #define q_alpha (0.1)
 
@@ -385,6 +388,11 @@ extern GridPrim preserve_dU;
 #if COOLING
   extern GridDouble omg_gr; // angular velocity 
   extern GridDouble t_gr; // target temperature
+#endif
+
+// Leon's patch, vector potentail //
+#if VECPOT
+  extern GridDouble vpot;
 #endif
 
 /*------------------------------------------------------------*/

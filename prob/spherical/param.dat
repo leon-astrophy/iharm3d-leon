@@ -43,8 +43,8 @@
 # r_bondi - bondi radius
 # beta_norm - plasma beta normalization
 # m_0 - bend of the field
-[dbl] rho_inf = 0.00538136783519545
-[dbl] r_bondi = 191.67222102346147
+[dbl] rho_inf = 0.01014082412212961
+[dbl] r_bondi = 23.815570306296983
 [dbl] beta_norm = 300.0
 [dbl] m_0 = 0.1
 

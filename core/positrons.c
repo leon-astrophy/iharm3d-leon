@@ -284,8 +284,10 @@ inline double ndot_net(double zfrac, double taut, double nprot, double theta, do
   double y1 = comptony1(xm, taut, theta);
   double fb = fbrem(y1, taut, theta, xm);
   double n1 = flatn1(xm, theta, y1);
-  double fs, ndots;
-  find_ndots(theta, taut, nprot, zfrac, r_size, bfield, &fs, &ndots);
+  double fs = 0;
+  double ndots = 0;
+  //double fs, ndots;
+  //find_ndots(theta, taut, nprot, zfrac, r_size, bfield, &fs, &ndots);
   double ng = ngamma(taut, theta, fb, ndotbr, fs, ndots, r_size);
   double nc = ncdot(ng, theta, nprot, zfrac, n1);
   double na = nadot(zfrac, nprot, theta);
@@ -680,34 +682,34 @@ inline double fbrem(double y, double taut, double theta, double xm) {
   double alpha = 3.0;
   double log_alpha = log(alpha);
   double logA = log(1.0+4.0*theta+16.0*theta*theta);
-  if(taut > 1.0) { 
-    if(y <= 1e3) {
-      out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
-    } else {
-      out = 1.0 - 2.0/3.0/y;
-    }
-    out = out*exp(-log_alpha/pow(taut,2.0)/logA);
+  //if(taut > 1.0) { 
+  if(y <= 1e3) {
+    out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
   } else {
-    double u0, u1, u2, u3, u4;
-    double f0, f1, f2, f3, f4;
-    int n_grid = 100;
-    double stau = taut + pow(taut,2.0);
-    double logthx = log(theta/xm);
-    double dh = (float)logthx/n_grid;
-    for (int o = 0; o <= n_grid; o += 4) {
-      u0 = dh*(float)o;
-      u1 = u0 + dh;
-      u2 = u0 + 2.0*dh;
-      u3 = u0 + 3.0*dh;
-      u4 = u0 + 4.0*dh;
-      f0 = u0*gsl_sf_gamma_inc_P((u0+log_alpha)/logA, stau);
-      f1 = u1*gsl_sf_gamma_inc_P((u1+log_alpha)/logA, stau);
-      f2 = u2*gsl_sf_gamma_inc_P((u2+log_alpha)/logA, stau);
-      f3 = u3*gsl_sf_gamma_inc_P((u3+log_alpha)/logA, stau);
-      f4 = u4*gsl_sf_gamma_inc_P((u4+log_alpha)/logA, stau);
-      out = out + (2.0/45.0)*dh*(7.0*f0 + 32.0*f1 + 12.0*f2 + 32.0*f3 + 7.0*f4);
-    }
+    out = 1.0 - 2.0/3.0/y;
   }
+  out = out*exp(-log_alpha/pow(taut,2.0)/logA);
+  //} else {
+  //  double u0, u1, u2, u3, u4;
+  //  double f0, f1, f2, f3, f4;
+  //  int n_grid = 100;
+  //  double stau = taut + pow(taut,2.0);
+  //  double logthx = log(theta/xm);
+  //  double dh = (float)logthx/n_grid;
+  //  for (int o = 0; o <= n_grid; o += 4) {
+  //    u0 = dh*(float)o;
+  //    u1 = u0 + dh;
+  //    u2 = u0 + 2.0*dh;
+  //    u3 = u0 + 3.0*dh;
+  //    u4 = u0 + 4.0*dh;
+  //    f0 = u0*gsl_sf_gamma_inc_P((u0+log_alpha)/logA, stau);
+  //    f1 = u1*gsl_sf_gamma_inc_P((u1+log_alpha)/logA, stau);
+  //    f2 = u2*gsl_sf_gamma_inc_P((u2+log_alpha)/logA, stau);
+  //    f3 = u3*gsl_sf_gamma_inc_P((u3+log_alpha)/logA, stau);
+  //    f4 = u4*gsl_sf_gamma_inc_P((u4+log_alpha)/logA, stau);
+  //    out = out + (2.0/45.0)*dh*(7.0*f0 + 32.0*f1 + 12.0*f2 + 32.0*f3 + 7.0*f4);
+  //  }
+  //}
   return out;
 }
 

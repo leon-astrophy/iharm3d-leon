@@ -30,6 +30,11 @@ GridDouble omg_gr; // angular velocity
 GridDouble t_gr; // target temperature
 #endif
 
+// Leon's patch, vector potential //
+#if VECPOT
+GridDouble vpot; // angular velocity 
+#endif
+
 /*---------------------------------------------------------------*/
 // Parameters
 
