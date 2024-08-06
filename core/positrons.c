@@ -284,10 +284,8 @@ inline double ndot_net(double zfrac, double taut, double nprot, double theta, do
   double y1 = comptony1(xm, taut, theta);
   double fb = fbrem(y1, taut, theta, xm);
   double n1 = flatn1(xm, theta, y1);
-  double fs = 0;
-  double ndots = 0;
-  //double fs, ndots;
-  //find_ndots(theta, taut, nprot, zfrac, r_size, bfield, &fs, &ndots);
+  double fs, ndots;
+  find_ndots(theta, taut, nprot, zfrac, r_size, bfield, &fs, &ndots);
   double ng = ngamma(taut, theta, fb, ndotbr, fs, ndots, r_size);
   double nc = ncdot(ng, theta, nprot, zfrac, n1);
   double na = nadot(zfrac, nprot, theta);

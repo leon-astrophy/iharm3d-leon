@@ -361,7 +361,9 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
       
       // look for fault conditions
       if(wsum < 1.e-10) {
+#if DEBUG
         fprintf(stderr, "fixup_utoprim: No usable neighbors at %d %d %d\n", i, j, k);
+#endif
         /////////////////////////////////////////////////////////
         // TODO set to something ~okay here, or exit screaming
         // This happens /very rarely/
