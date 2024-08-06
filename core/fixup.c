@@ -49,7 +49,7 @@ void fixup(struct GridGeom *G, struct FluidState *S)
   if (firstc) {Stmp = calloc(1,sizeof(struct FluidState)); firstc = 0;}
 
   // initialize flag
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL fflag[k][j][i] = 0;
 
   // apply ceilings
@@ -297,7 +297,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   timer_start(TIMER_FIXUP);
 
   // Flip the logic of the pflag[] so that it now indicates which cells are good
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL {
     pflag[k][j][i] = !pflag[k][j][i];
   }
@@ -305,7 +305,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   // count number of bad cells
 #if DEBUG
   int nbad_utop = 0;
-#pragma omp parallel for simd collapse(2) reduction (+:nbad_utop)
+#pragma omp parallel for simd collapse(3) reduction (+:nbad_utop)
   ZLOOP {
     // Count the 0 = bad cells
     nbad_utop += !pflag[k][j][i];
@@ -317,6 +317,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   ///////////////////////////////////////////////////////////////////
   // TODO find a way to do this once, or put it in bounds at least?
   ///////////////////////////////////////////////////////////////////
+  #pragma omp parallel for collapse(3) 
   for (int k = 0; k < NG; k++) {
     for (int j = 0; j < NG; j++) {
       for (int i = 0; i < NG; i++) {
@@ -342,6 +343,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   //#pragma omp parallel for collapse(3) reduction(+:bad)
   //////////////////////////////////////////////////////////
   // do interpolation for bad grid cells
+  #pragma omp parallel for collapse(3) 
   ZLOOP {
     if (pflag[k][j][i] == 0) {
       double wsum = 0.;
@@ -394,7 +396,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
 #endif
 
   // Reset the pflag
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL {
     pflag[k][j][i] = 0;
   }

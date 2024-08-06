@@ -27,7 +27,7 @@ CC=h5pcc
 #----------------------------------------------------------------------------------#
 
 # Example CFLAGS for going fast with GCC
-CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -funroll-loops -fopenmp 
+CFLAGS = -std=gnu99 -O3 -march=native -mtune=native -flto -funroll-loops -fopenmp -ftree-vectorize -pipe
 MATH_LIB = -lm
 
 # ICC does not like -lm and uses different flags

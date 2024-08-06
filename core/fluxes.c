@@ -147,11 +147,11 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
   // These are un-macro'd to bundle OpenMP thread tasks rather than memory accesses
   PLOOP {
     if (dir == 1) {
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(3)
       ZSLOOP_REVERSE(-1, N3, -1, N2, -1, N1)
         Sl->P[ip][k][j][i] = Sl->P[ip][k][j][i - 1];
     } else if (dir == 2) {
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(3)
       for (int k = (N3) + NG; k >= (-1) + NG; k--) {
         for (int i = (N1) + NG; i >= (-1) + NG; i--) {
           for (int j = (N2) + NG; j >= (-1) + NG; j--)
@@ -159,7 +159,7 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
         }
       }
     } else if (dir == 3) {
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(3)
       for (int j = (N2) + NG; j >= (-1) + NG; j--) {
         for (int i = (N1) + NG; i >= (-1) + NG; i--) {
           for (int k = (N3) + NG; k >= (-1) + NG; k--)
@@ -215,11 +215,11 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
   // get magnetosonic speed
 #pragma omp parallel
   {
-#pragma omp for collapse(2) nowait
+#pragma omp for collapse(3) nowait
     ZSLOOP(-1, N3, -1, N2, -1, N1){
         mhd_vchar(G, Sl, i, j, k, loc, dir, *cmaxL, *cminL);
     }
-#pragma omp for collapse(2)
+#pragma omp for collapse(3)
     ZSLOOP(-1, N3, -1, N2, -1, N1) {
         mhd_vchar(G, Sr, i, j, k, loc, dir, *cmaxR, *cminR);
     }
@@ -232,7 +232,7 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
   timer_start(TIMER_LR_CMAX);
 
   //find maximum signal speed across inferfaces
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZSLOOP(-1, N3, -1, N2, -1, N1) {
     (*cmax)[k][j][i] = fabs(MY_MAX(MY_MAX(0., (*cmaxL)[k][j][i]), (*cmaxR)[k][j][i]));
     (*cmin)[k][j][i] = fabs(MY_MAX(MY_MAX(0., -(*cminL)[k][j][i]), -(*cminR)[k][j][i]));
@@ -259,7 +259,7 @@ void lr_to_flux(struct GridGeom *G, struct FluidState *Sr,
 
   //interface fluxes, lax-friedrichs method
   // Leon: tried to use HLLE //
-#pragma omp parallel for simd collapse(3)
+#pragma omp parallel for simd collapse(4)
   PLOOP {
     ZSLOOP(-1, N3, -1, N2, -1, N1) {
 #if RSOLVER == LF
@@ -309,7 +309,7 @@ void flux_ct(struct FluidFlux *F)
 #pragma omp parallel
   {
     // This and the following are /not/ just ZLOOPs
-#pragma omp for simd collapse(2)
+#pragma omp for simd collapse(3)
     ZSLOOP(0, N3, 0, N2, 0, N1) {
       emf->X3[k][j][i] =  0.25*(F->X1[B2][k][j][i] + F->X1[B2][k][j-1][i]
                               - F->X2[B1][k][j][i] - F->X2[B1][k][j][i-1]);
@@ -320,19 +320,19 @@ void flux_ct(struct FluidFlux *F)
     }
 
     // Then, Rewrite EMFs as fluxes, after Toth
-#pragma omp for simd collapse(2) nowait
+#pragma omp for simd collapse(3) nowait
     ZSLOOP(0, N3 - 1, 0, N2 - 1, 0, N1) {
       F->X1[B1][k][j][i] =  0.;
       F->X1[B2][k][j][i] =  0.5*(emf->X3[k][j][i] + emf->X3[k][j+1][i]);
       F->X1[B3][k][j][i] = -0.5*(emf->X2[k][j][i] + emf->X2[k+1][j][i]);
     }
-#pragma omp for simd collapse(2) nowait
+#pragma omp for simd collapse(3) nowait
     ZSLOOP(0, N3 - 1, 0, N2, 0, N1 - 1) {
       F->X2[B1][k][j][i] = -0.5*(emf->X3[k][j][i] + emf->X3[k][j][i+1]);
       F->X2[B2][k][j][i] =  0.;
       F->X2[B3][k][j][i] =  0.5*(emf->X1[k][j][i] + emf->X1[k+1][j][i]);
     }
-#pragma omp for simd collapse(2)
+#pragma omp for simd collapse(3)
     ZSLOOP(0, N3, 0, N2 - 1, 0, N1 - 1) {
       F->X3[B1][k][j][i] =  0.5*(emf->X2[k][j][i] + emf->X2[k][j][i+1]);
       F->X3[B2][k][j][i] = -0.5*(emf->X1[k][j][i] + emf->X1[k][j+1][i]);
