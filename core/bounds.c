@@ -58,7 +58,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //x-direction, inner boundary
   if(global_start[0] == 0) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     KLOOP {
       JLOOP {
@@ -86,7 +86,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
     if(X1L_INFLOW == 0) {
       // Make sure there is no inflow at the inner boundary
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
       KLOOP {
         JLOOP {
@@ -103,7 +103,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //x-direction, outer boundary
   if(global_stop[0] == N1TOT) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     KLOOP {
       JLOOP {
@@ -133,7 +133,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
     if(X1R_INFLOW == 0) {
       // Make sure there is no inflow at the outer boundary
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
       KLOOP {
         JLOOP {
@@ -155,7 +155,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //y-direction, inner boundary
   if(global_start[1] == 0) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     KLOOP {
       ILOOPALL {
@@ -185,7 +185,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //y-direction, outer boundary
   if(global_stop[1] == N2TOT) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     KLOOP {
       ILOOPALL {
@@ -219,7 +219,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //z-direction, inner boundary
   if (global_start[2] == 0) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     JLOOPALL {
       ILOOPALL {
@@ -241,7 +241,7 @@ void set_bounds(struct GridGeom *G, struct FluidState *S)
   //z-direction, outer boundary
   if(global_stop[2] == N3TOT) {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
 #endif
     JLOOPALL {
       ILOOPALL {
@@ -333,7 +333,7 @@ void fix_flux(struct FluidFlux *F)
         F->X1[RHO][k][j][0+NG] = MY_MIN(F->X1[RHO][k][j][0+NG], 0.);
 
         /* Leon's patch, same treatment for positron */
-#if POSITRONS
+#ifdef POSITRONS
         F->X1[RPL][k][j][0+NG] = MY_MIN(F->X1[RPL][k][j][0+NG], 0.);
 #endif
       }
@@ -349,7 +349,7 @@ void fix_flux(struct FluidFlux *F)
         F->X1[RHO][k][j][N1+NG] = MY_MAX(F->X1[RHO][k][j][N1+NG], 0.);
         
         /* Leon's patch, same treatment for positron */
-#if POSITRONS
+#ifdef POSITRONS
         F->X1[RPL][k][j][N1+NG] = MY_MAX(F->X1[RPL][k][j][N1+NG], 0.);
 #endif
       }

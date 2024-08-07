@@ -46,7 +46,7 @@ void step(struct GridGeom *G, struct FluidState *S)
 #if INTEL_WORKAROUND
   memcpy(&(Ssave->P),&(S->P),sizeof(GridPrim));
 #else
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
   PLOOP ZLOOPALL Ssave->P[ip][k][j][i] = S->P[ip][k][j][i];
 #endif
 
@@ -203,7 +203,7 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
 #if INTEL_WORKAROUND
   memcpy(&(Sf->P),&(Si->P),sizeof(GridPrim));
 #else
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
   PLOOP ZLOOPALL Sf->P[ip][k][j][i] = Si->P[ip][k][j][i];
 #endif
 
@@ -262,7 +262,7 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
 //////////////////////////////////
 
   // update conservative variables 
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for collapse(3)
   PLOOP ZLOOP {
     Sf->U[ip][k][j][i] = Si->U[ip][k][j][i] +
       Dt*((F->X1[ip][k][j][i] - F->X1[ip][k][j][i+1])/dx[1] +
@@ -307,7 +307,7 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
   ////////////////////////////////////////////////////////////////////
 
   // save error flag in u to p subroutine
-#pragma omp parallel for simd collapse(3)
+#pragma omp parallel for simd collapse(2)
   ZLOOPALL {
     fail_save[k][j][i] = pflag[k][j][i];
   }

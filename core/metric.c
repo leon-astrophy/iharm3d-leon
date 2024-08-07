@@ -121,7 +121,7 @@ inline void lower_grid(GridVector vcon, GridVector vcov, struct GridGeom *G, int
 void lower_grid_vec(GridVector vcon, GridVector vcov, struct GridGeom *G, int kstart, int kstop,
   int jstart, int jstop, int istart, int istop, int loc)
 {
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
   DLOOP1 {
     ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) vcov[mu][k][j][i] = 0.;
   }

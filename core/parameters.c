@@ -51,6 +51,10 @@ int get_param(char *key, void **data) {
 
 // read core parameters from parameter.dat
 void set_core_params() {
+  // Leon's patch, Mass unit and black hole mass //
+  set_param("M_unit", &M_unit);
+  set_param("mbh", &mbh);
+
   set_param("tf", &tf);
   set_param("dt", &dt);
 #if METRIC == MINKOWSKI

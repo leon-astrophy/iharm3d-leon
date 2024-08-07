@@ -7,8 +7,8 @@
  ******************************************************************************/
 
 /* GLOBAL RESOLUTION */
-#define N1TOT 288
-#define N2TOT 128
+#define N1TOT 256
+#define N2TOT 256
 #define N3TOT 1
 
 /* MPI DECOMPOSITION */
@@ -21,7 +21,7 @@
  *   MINKOWSKI, MKS
  */
 #define METRIC MKS
-#define DEREFINE_POLES 1
+#define DEREFINE_POLES 0
 
 /* FLOORS
  *   Wind term is a small source for torii only
@@ -31,27 +31,22 @@
 #define BSQORHOMAX (100.)
 #define UORHOMAX (100.)
 
-//* ELECTRONIC OPTIONS
-#define ELECTRONS           0
-// Flag for enabling all models
-#define ALLMODELS           0   
-//* SUPPRESS_MAG_HEAT - (0,1) NO ELECTRON HEATING WHEN SIGMA > 1
+/* ELECTRONS AND OPTIONS
+ *   SUPPRESS_MAG_HEAT - (0,1) NO ELECTRON HEATING WHEN SIGMA > 1
+ *   BETA_HEAT         - (0,1) BETA-DEPENDENT HEATING
+ */
+#define ELECTRONS 0
 #define SUPPRESS_HIGHB_HEAT 1
-//* BETA_HEAT - (0,1) BETA-DEPENDENT HEATING
-#define BETA_HEAT           1
+#define BETA_HEAT 1
 
 /* RECONSTRUCTION ALGORITHM
  *   LINEAR, PPM, WENO, MP5
  */
 #define RECONSTRUCTION WENO
 
-/* Riemann solver 
- LF, HLLE */
-#define RSOLVER LF
-
 /* BOUNDARY CONDITIONS
  *   OUTFLOW PERIODIC POLAR USER
- * remark: x1r must be of USER */
+ */
 #define X1L_BOUND OUTFLOW
 #define X1R_BOUND USER
 #define X2L_BOUND POLAR
@@ -59,6 +54,5 @@
 #define X3L_BOUND PERIODIC
 #define X3R_BOUND PERIODIC
 
-/* remark: x1r must allow inflow */
 #define X1L_INFLOW 0
 #define X1R_INFLOW 1

@@ -36,7 +36,7 @@ void current_calc(struct GridGeom *G, struct FluidState *S, struct FluidState *S
   // Calculate time-centered primitive variables
   // Intel 18.0.2 crashes at these parallel directives
 #if !INTEL_WORKAROUND
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
 #endif
   PLOOP {
     ZLOOPALL {
@@ -50,7 +50,7 @@ void current_calc(struct GridGeom *G, struct FluidState *S, struct FluidState *S
   get_state_vec(G, Sa, CENT, -1, N3, -1, N2, -1, N1);
 
 #if !INTEL_WORKAROUND
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
 #endif
 
   //inititalize
@@ -123,7 +123,7 @@ void omega_calc(struct GridGeom *G, struct FluidState *S, GridDouble *omega)
   }
 
   //TODO test inverting these loops, esp if allows writing to omega sooner
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
   DLOOP2 {
     ZLOOP {
       double gFmunu = gFcon_calc(G, S, mu, nu, i, j, k);
@@ -133,7 +133,7 @@ void omega_calc(struct GridGeom *G, struct FluidState *S, GridDouble *omega)
   }
 
   // get omega
-#pragma omp parallel for simd collapse(3)
+#pragma omp parallel for simd collapse(2)
   ZLOOP {
     (*omega)[k][j][i] = (*gFcov01)[k][j][i]/(*gFcov13)[k][j][i];
   }

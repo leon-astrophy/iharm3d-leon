@@ -85,13 +85,15 @@ void diag(struct GridGeom *G, struct FluidState *S, int call_code)
       e += S->U[UU][k][j][i]*dV;
 
       double divb = flux_ct_divb(G, S, i, j, k);
-
+      printf("%.12e\n", divb);
+      
+        
       if (divb > divbmax) {
         divbmax = divb;
       }
     }
   }
-
+  exit(0);
   //mpi stuff
   rmed = mpi_reduce(rmed);
   pp = mpi_reduce(pp);
@@ -335,7 +337,7 @@ void area_map_pflag(int i, int j, int k)
 inline void check_nan(struct FluidState *S, const char* flag)
 {
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
 #endif
   PLOOP ZLOOPALL {
     if (isnan(S->P[ip][k][j][i])) {
@@ -344,7 +346,7 @@ inline void check_nan(struct FluidState *S, const char* flag)
     }
   }
 #if !INTEL_WORKAROUND
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
 #endif
   DLOOP1 ZLOOPALL {
     if (isnan(S->ucon[mu][k][j][i]) || isnan(S->ucov[mu][k][j][i]) || isnan(S->bcon[mu][k][j][i]) || isnan(S->bcov[mu][k][j][i])){
@@ -359,7 +361,7 @@ inline void check_nan(struct FluidState *S, const char* flag)
 // backup fluxes
 inline void update_f(struct FluidFlux *F, GridPrim *dU)
 {
-#pragma omp parallel for simd collapse(4)
+#pragma omp parallel for simd collapse(3)
   PLOOP ZLOOP {
     preserve_F.X1[ip][k][j][i] = F->X1[ip][k][j][i];
     preserve_F.X2[ip][k][j][i] = F->X2[ip][k][j][i];

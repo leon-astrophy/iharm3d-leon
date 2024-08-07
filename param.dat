@@ -1,18 +1,19 @@
-#------------------------------------------------------------------
+### RUNTIME PARAMETERS FOR EHT COMPARISON PROBLEM ###
 
-### RUNTIME PARAMETERS FOR SANE accretion ###
-
-#------------------------------------------------------------------
-# these are essentials
+# Leon's patch, black hole mass (in solar mass) #
+# Also the unit conversion between code to cgs #
+[dbl] M_unit = 2.729105562275544e+24
+[dbl] mbh = 1e8
 
 # COORDINATES: finaltime, dt, and outer boundaries
-[dbl] tf = 20000.0e0
+[dbl] tf = 3e4
 [dbl] dt = 1.0e-06
 [dbl] Rout = 1000.0
 
 # FLUID: gas constant, cfl, and jitter
 [dbl] gam = 1.333333
 [dbl] cour = 0.7
+[dbl] u_jitter = 0.10
 
 # OUTPUT: frequecies
 [dbl] DTd = 5.0
@@ -29,26 +30,6 @@
 [dbl] tptemin = 0.001
 [dbl] tptemax = 1000.0
 
-# GEOMETRY: BH spins, and MMKS stuff
-[dbl] a = 0.9375
-[dbl] hslope = 0.3
-
-# GEOMETRY: MMKS stuff
-[dbl] mks_smooth = 0.5
-[dbl] poly_xt = 0.82
-[dbl] poly_alpha = 14.0
-
-#------------------------------------------------------------------
-# these are problem dependent 
-
-# Leon's patch, black hole mass (in solar mass) #
-# Also the unit conversion between code to cgs #
-[dbl] M_unit = 3.427459985890421e+24
-[dbl] mbh = 1e8
-
-# random perturbation #
-[dbl] u_jitter = 0.10
-
 # PROBLEM: inner torus radius, position of maximum pressure
 [dbl] rin = 10.0
 [dbl] rmax = 20.0
@@ -57,9 +38,16 @@
 [int] mad_type = 0
 [dbl] beta = 100.0
 
+# GEOMETRY: BH spins, and MMKS stuff
+[dbl] a = 0.9375
+[dbl] hslope = 0.3
+
 # NOT USED: MAD B-field prescription details
 [dbl] rBstart = 25.0
 [dbl] rBend = 810.0
 [dbl] BHflux = 0.0
 
-#------------------------------------------------------------------
+# GEOMETRY: MMKS stuff
+[dbl] mks_smooth = 0.5
+[dbl] poly_xt = 0.82
+[dbl] poly_alpha = 14.0

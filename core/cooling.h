@@ -16,13 +16,11 @@
 #define NOBLE 1
 #define FRAGILE 2
 #define PRASUN 3
+#define REAL 4
 
 // select cooling function //
 // copied from HARMPI //
-#define WHICHCOOL NOBLE
-
-// limit cooling rate if it is too steep?//
-#define LIMITCOOL 0
+#define WHICHCOOLING NOBLE
 
 //******************************************************************************
 
