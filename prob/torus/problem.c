@@ -18,7 +18,7 @@
 // declare
 static gsl_rng *rng;
 
-// Local declarations
+// Local declarations of functions 
 double lfish_calc(double rmax);
 
 // Different MAD initializations
@@ -50,7 +50,7 @@ void set_problem_params() {
   // Leon's patch, Mass unit and black hole mass //
   set_param("M_unit", &M_unit);
   set_param("mbh", &mbh);
-
+  
   set_param("rin", &rin);
   set_param("rmax", &rmax);
   set_param("u_jitter", &u_jitter);
@@ -468,7 +468,7 @@ void init(struct GridGeom *G, struct FluidState *S)
     S->P[B1][k][j][i] *= norm ;
     S->P[B2][k][j][i] *= norm ;
   }
-  printf("%.12e\n", norm);
+
   ///////////////////////////////////////////
   // TODO do this only for BHflux > SMALL
   ///////////////////////////////////////////
@@ -570,7 +570,7 @@ void init(struct GridGeom *G, struct FluidState *S)
 #if ELECTRONS
   init_electrons(G,S);
 #endif 
-  printf("%.12e\n", norm);
+
   // apply floors and ceilings
   fixup(G, S);
 
@@ -604,4 +604,6 @@ double lfish_calc(double r)
        (pow(a, 2) + (-2. + r) * r))
       );
 }
+
+//******************************************************************************
 

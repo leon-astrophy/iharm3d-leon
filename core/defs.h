@@ -8,10 +8,15 @@
 
 #pragma once
 
-// Zone flags.  TODO move these to the heap
+/*---------------------------------------------------------------*/
+
+// Zone flags. TODO move these to the heap
 GridInt pflag;
 GridInt fail_save;
 GridInt fflag;
+
+/*---------------------------------------------------------------*/
+/* arrays */
 
 // backup variables
 #if DEBUG
@@ -19,15 +24,20 @@ struct FluidFlux preserve_F;
 GridPrim preserve_dU;
 #endif
 
-// Leon's patch, extra variables for cooling/pair productions //
-#if POSITRONS
- GridDouble temp; // plasma temperature
-#endif
-#ifdef COOLING
- GridDouble omg_gr; // angular velocity 
+// Leon's patch, extra variables for cooling //
+#if COOLING
+GridDouble omg_gr; // angular velocity 
+GridDouble t_gr; // target temperature
 #endif
 
+// Leon's patch, vector potential //
+#if VECPOT
+GridDouble vpot; // angular velocity 
+#endif
+
+/*---------------------------------------------------------------*/
 // Parameters
+
 // physical
 double a;
 double gam;
@@ -61,9 +71,6 @@ double mdot, edot, ldot;
 double mdot_eh, edot_eh, ldot_eh;
 int icurr, jcurr, kcurr;
 
-// number of threads
-int nthreads;
-
 //electronic variables
 #if ELECTRONS
 double game, gamp;
@@ -71,18 +78,21 @@ double fel0;
 double tptemin, tptemax;
 #endif
 
-//what are these?
+// number of threads
+int nthreads;
+
+// MPI stuff 
 int global_start[3];
 int global_stop[3];
 
-/*----------------------------------------*/
+/*---------------------------------------------------------------*/
 
 // Leon's patch, unit coversion //
 double R_isco;
 
 // Leon's patch, unit conversion //
 double M_unit, mbh; 
-double Mbh, L_unit, T_unit, RHO_unit, U_unit;
+double Mbh, L_unit, T_unit, RHO_unit, U_unit, B_unit;
 
-/*----------------------------------------*/
+/*---------------------------------------------------------------*/
 

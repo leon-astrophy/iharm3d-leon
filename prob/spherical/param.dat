@@ -1,6 +1,6 @@
 #------------------------------------------------------------------
 
-### RUNTIME PARAMETERS for bondi accretion problem ###
+### RUNTIME PARAMETERS for spherical accretion problem ###
 
 #------------------------------------------------------------------
 # these are essentials
@@ -8,7 +8,7 @@
 # COORDINATES: finaltime, dt, and outer boundaries
 [dbl] tf = 1.0e3
 [dbl] dt = 1.0e-06
-[dbl] Rout = 20.0
+[dbl] Rout = 1.0e3
 
 # GEOMETRY: BH spins, and MMKS stuff
 [dbl] a = 0.0
@@ -39,11 +39,13 @@
 # these are problem dependent
 
 # PROBLEM parameter #
-# mdots - mass accretion rate
-# rs - sonic radius #
-# Rhor - inner boundary #
-[dbl] mdots = 9.363968128545602
-[dbl] rs = 20.0
-[dbl] Rhor = 2.1
+# rho_inf - density at infinity
+# r_bondi - bondi radius
+# beta_norm - plasma beta normalization
+# m_0 - bend of the field
+[dbl] rho_inf = 0.01014082412212961
+[dbl] r_bondi = 23.815570306296983
+[dbl] beta_norm = 300.0
+[dbl] m_0 = 0.1
 
 #------------------------------------------------------------------

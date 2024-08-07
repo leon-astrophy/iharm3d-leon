@@ -49,7 +49,7 @@ void fixup(struct GridGeom *G, struct FluidState *S)
   if (firstc) {Stmp = calloc(1,sizeof(struct FluidState)); firstc = 0;}
 
   // initialize flag
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL fflag[k][j][i] = 0;
 
   // apply ceilings
@@ -154,6 +154,8 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   double rplflr_geom;
 #endif
 
+  /*--------------------------------------------------------------------------------------------------*/
+
   if(METRIC == MKS) {
 
     // find r and theta
@@ -189,6 +191,8 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     rplflr_geom = RHOMIN*1.e-2*ZMIN*ME_MP;
 #endif
   }
+
+  /*--------------------------------------------------------------------------------------------------*/
 
   // Record Geometric floor hits
   if (rhoflr_geom > S->P[RHO][k][j][i]) fflag[k][j][i] |= HIT_FLOOR_GEOM_RHO;
@@ -227,12 +231,10 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   double rplflr_max = rplflr_geom;
 #endif
 
+  /*--------------------------------------------------------------------------------------------------*/
+
   // Leon's patch, positrons //
-#if POSITRONS
-  if (rhoflr_max > S->P[RHO][k][j][i] || uflr_max > S->P[UU][k][j][i] || rplflr_max > S->P[RPL][k][j][i]) { // Apply floors
-#else
   if (rhoflr_max > S->P[RHO][k][j][i] || uflr_max > S->P[UU][k][j][i]) { // Apply floors
-#endif
 
     // Initialize a dummy fluid parcel
     PLOOP {
@@ -243,11 +245,6 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     // Add mass and internal energy, but not velocity
     Stmp->P[RHO][k][j][i] = MY_MAX(0., rhoflr_max - S->P[RHO][k][j][i]);
     Stmp->P[UU][k][j][i] = MY_MAX(0., uflr_max - S->P[UU][k][j][i]);
-
-    // Leon's patch, positrons //
-#if POSITRONS
-    Stmp->P[RPL][k][j][i] = MY_MAX(0., rplflr_max - S->P[RPL][k][j][i]);
-#endif
 
     // Leon's patch, add 3-velocity //
     Stmp->P[U1][k][j][i] = S->P[U1][k][j][i];
@@ -285,6 +282,53 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
     S->P[KTOT][k][j][i] = (gam - 1.)*S->P[UU][k][j][i]/pow(S->P[RHO][k][j][i],gam);
 #endif
 
+  /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+  // Leon's patch, positrons, floors are applied seperately //
+#if POSITRONS
+  if (rplflr_max > S->P[RPL][k][j][i]) { // Apply floors
+
+    // Initialize a dummy fluid parcel
+    PLOOP {
+      Stmp->P[ip][k][j][i] = 0;
+      Stmp->U[ip][k][j][i] = 0; 
+    }
+
+    // Add mass and internal energy, but not velocity
+    Stmp->P[RPL][k][j][i] = MY_MAX(0., rplflr_max - S->P[RPL][k][j][i]);
+
+    // Leon's patch, add 3-velocity //
+    Stmp->P[U1][k][j][i] = S->P[U1][k][j][i];
+    Stmp->P[U2][k][j][i] = S->P[U2][k][j][i];
+    Stmp->P[U3][k][j][i] = S->P[U3][k][j][i];
+
+    // Get covariant and contravariant velocity //
+    get_state(G, Stmp, i, j, k, CENT);
+
+    // Zero the 3-velocity again //
+    Stmp->P[U1][k][j][i] = 0;
+    Stmp->P[U2][k][j][i] = 0;
+    Stmp->P[U3][k][j][i] = 0;
+
+    // convert to conservative variables
+    prim_to_flux(G, Stmp, i, j, k, 0, CENT, Stmp->U);
+
+    // And for the current state
+    //get_state(G, S, i, j, k, CENT); // Called just above, or vectorized above that
+    prim_to_flux(G, S, i, j, k, 0, CENT, S->U); // Called just above, or vectorized above that
+
+    // Add new conserved variables to current values
+    PLOOP {
+      S->U[ip][k][j][i] += Stmp->U[ip][k][j][i];
+      S->P[ip][k][j][i] += Stmp->P[ip][k][j][i];
+    }
+  
+    // Recover primitive variables
+    // CFG: do we get any failures here?
+    pflag[k][j][i] = U_to_P(G, S, i, j, k, CENT);
+  }
+#endif
+  /*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+  
 }
 
 //***************************************************************************************
@@ -297,7 +341,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   timer_start(TIMER_FIXUP);
 
   // Flip the logic of the pflag[] so that it now indicates which cells are good
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL {
     pflag[k][j][i] = !pflag[k][j][i];
   }
@@ -305,7 +349,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   // count number of bad cells
 #if DEBUG
   int nbad_utop = 0;
-#pragma omp parallel for simd collapse(2) reduction (+:nbad_utop)
+#pragma omp parallel for simd collapse(3) reduction (+:nbad_utop)
   ZLOOP {
     // Count the 0 = bad cells
     nbad_utop += !pflag[k][j][i];
@@ -317,6 +361,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   ///////////////////////////////////////////////////////////////////
   // TODO find a way to do this once, or put it in bounds at least?
   ///////////////////////////////////////////////////////////////////
+  #pragma omp parallel for collapse(3) 
   for (int k = 0; k < NG; k++) {
     for (int j = 0; j < NG; j++) {
       for (int i = 0; i < NG; i++) {
@@ -342,6 +387,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
   //#pragma omp parallel for collapse(3) reduction(+:bad)
   //////////////////////////////////////////////////////////
   // do interpolation for bad grid cells
+  #pragma omp parallel for collapse(3) 
   ZLOOP {
     if (pflag[k][j][i] == 0) {
       double wsum = 0.;
@@ -359,7 +405,9 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
       
       // look for fault conditions
       if(wsum < 1.e-10) {
+#if DEBUG
         fprintf(stderr, "fixup_utoprim: No usable neighbors at %d %d %d\n", i, j, k);
+#endif
         /////////////////////////////////////////////////////////
         // TODO set to something ~okay here, or exit screaming
         // This happens /very rarely/
@@ -394,7 +442,7 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S)
 #endif
 
   // Reset the pflag
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOPALL {
     pflag[k][j][i] = 0;
   }

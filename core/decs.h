@@ -37,7 +37,7 @@
 #endif
 
 // Leon's patch, number of OMP cores //
-#define OMP_CORES 2
+#define OMP_CORES 1
 
 //*******************************************************************************
 //*
@@ -81,7 +81,10 @@
 #define POSITRONS 1
 
 // Leon's patch, include radiative cooling? //
-#define COOLING 0
+#define COOLING 1
+
+// Leon's patch, evolve the vector potential? //
+#define VECPOT 0
 
 // Leon's patch, quality factor //
 #define q_alpha (0.1)
@@ -146,9 +149,15 @@
 
 // Reconstruction algorithms
 #define LINEAR (0)
-#define PPM    (1)
-#define WENO   (2)
-#define MP5    (3)
+#define WENO   (1)
+#define MP5    (2)
+#define PPM    (3)
+#define PPMX   (4)
+#define WENOZ  (5)
+
+// Riemann solvers //
+#define LF (0)
+#define HLLE (1)
 
 // *********************************************************** // 
 // Primitive and conserved variables
@@ -305,9 +314,9 @@
 // Leon's patch, extra timers //
 #if POSITRONS || COOLING
 #undef NUM_TIMERS
-#define NUM_TIMERS (30)
+#define NUM_TIMERS        (30)
 #define TIMER_POSITRON    (29)
-#define TIMER_COOLING    (28)
+#define TIMER_COOLING     (28)
 #endif
 
 //*******************************************************************************
@@ -375,9 +384,15 @@ extern GridPrim preserve_dU;
 
 /*------------------------------------------------------------*/
 
-// Leon's patch, extra variables for cooling/pair productions //
-#ifdef COOLING
+// Leon's patch, extra variables for cooling //
+#if COOLING
   extern GridDouble omg_gr; // angular velocity 
+  extern GridDouble t_gr; // target temperature
+#endif
+
+// Leon's patch, vector potentail //
+#if VECPOT
+  extern GridDouble vpot;
 #endif
 
 /*------------------------------------------------------------*/
@@ -444,7 +459,7 @@ extern double R_isco;
 
 // Leon's patch, unit conversion //
 extern double M_unit, mbh; 
-extern double Mbh, L_unit, T_unit, RHO_unit, U_unit; 
+extern double Mbh, L_unit, T_unit, RHO_unit, U_unit, B_unit; 
 
 /*------------------------------------------------------------*/
 
@@ -586,9 +601,11 @@ void fixup_utoprim(struct GridGeom *G, struct FluidState *S);
 double get_flux(struct GridGeom *G, struct FluidState *S, struct FluidFlux *F);
 void flux_ct(struct FluidFlux *F);
 
-/////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//
 // hdf5_utils.c has its own header
-/////////////////////////////////////
+//
+///////////////////////////////////////////////////////////////////////
 
 // io.c
 void init_io();
@@ -642,14 +659,14 @@ void read_params(char *pfname);
 // phys.c
 void prim_to_flux(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int dir, int loc, GridPrim flux);
 void prim_to_flux_vec(struct GridGeom *G, struct FluidState *S, int dir,
-  int loc, int kstart, int kstop, int jstart, int jstop, int istart, int istop, GridPrim flux);
+int loc, int kstart, int kstop, int jstart, int jstop, int istart, int istop, GridPrim flux);
 void bcon_calc(struct FluidState *S, int i, int j, int k);
 void mhd_calc(struct FluidState *S, int i, int j, int k, int dir, double *mhd);
 void get_fluid_source(struct GridGeom *G, struct FluidState *S, GridPrim *dU);
 double bsq_calc(struct FluidState *S, int i, int j, int k);
 void get_state(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 void get_state_vec(struct GridGeom *G, struct FluidState *S, int loc,
-  int kstart, int kstop, int jstart, int jstop, int istart, int istop);
+int kstart, int kstop, int jstart, int jstop, int istart, int istop);
 void ucon_calc(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 double mhd_gamma_calc(struct GridGeom *G, struct FluidState *S, int i, int j, int k, int loc);
 void mhd_vchar(struct GridGeom *G, struct FluidState *Sr, int i, int j, int k, int loc, int dir, GridDouble cmax, GridDouble cmin);

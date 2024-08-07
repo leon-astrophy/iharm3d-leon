@@ -1,0 +1,37 @@
+#------------------------------------------------------------------
+
+### RUNTIME PARAMETERS for 1D hydro test problem ###
+
+#------------------------------------------------------------------
+
+# COORDINATES: final time and dt
+[dbl] tf = 0.36
+[dbl] dt = 1.0e-06
+
+# COORDINATES: coordinate extent 
+[dbl] x1Min = 0.0
+[dbl] x1Max = 1.0
+[dbl] x2Min = 0.0
+[dbl] x2Max = 1.0
+[dbl] x3Min = 0.0
+[dbl] x3Max = 1.0
+
+# FLUID
+[dbl] gam = 1.66666666667
+[dbl] cour = 0.2
+
+# OUTPUT
+[dbl] DTd = 0.2
+[dbl] DTf = 10.0
+[dbl] DTl = 0.5
+[int] DTr = 100
+[int] DTp = 10
+
+# Electrons
+[dbl] game = 1.333333
+[dbl] gamp = 1.666667
+[dbl] fel0 = 0.01
+[dbl] tptemin = 0.001
+[dbl] tptemax = 1000.0
+
+#------------------------------------------------------------------

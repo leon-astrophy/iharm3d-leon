@@ -97,7 +97,7 @@ GridPrim flux)
   /////////////////////////////////////////////////////////////////
 #pragma omp parallel
 {
-#pragma omp for collapse(3) nowait
+#pragma omp for simd collapse(3) nowait
   ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
     //declare
     double mhd[NDIM];
@@ -115,7 +115,7 @@ GridPrim flux)
     flux[U3][k][j][i] = mhd[3] * G->gdet[loc][j][i];
   }
 
-#pragma omp for collapse(3) nowait
+#pragma omp for simd collapse(3) nowait
   ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
     // Dual of Maxwell tensor
     flux[B1][k][j][i] = (S->bcon[1][k][j][i] * S->ucon[dir][k][j][i]
@@ -128,7 +128,7 @@ GridPrim flux)
 
   //section for electrons
 #if ELECTRONS
-#pragma omp for collapse(3)
+#pragma omp for simd collapse(3)
   ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
     // RHO already includes a factor of gdet!
     for (int idx = KEL0; idx < NKEL ; idx++) {
@@ -140,7 +140,7 @@ GridPrim flux)
 
   // Leon's patch, e-p mass //
 #if POSITRONS
-#pragma omp for collapse(3)
+#pragma omp for simd collapse(3)
   ZSLOOP(kstart, kstop, jstart, jstop, istart, istop) {
     flux[RPL][k][j][i] = S->P[RPL][k][j][i] * S->ucon[dir][k][j][i] * G->gdet[loc][j][i];
   }
@@ -394,7 +394,7 @@ inline void get_fluid_source(struct GridGeom *G, struct FluidState *S, GridPrim 
   // Add a small "wind" source term in RHO,UU
   // Stolen shamelessly from iharm2d_v3
 #if WIND_TERM
-#pragma omp parallel for simd collapse(2)
+#pragma omp parallel for simd collapse(3)
   ZLOOP {
 
     // get grid index, r and theta
@@ -423,7 +423,7 @@ inline void get_fluid_source(struct GridGeom *G, struct FluidState *S, GridPrim 
   prim_to_flux_vec(G, dS, 0, CENT, 0, N3-1, 0, N2-1, 0, N1-1, dS->U);
 
   // update source terms
-#pragma omp parallel for simd collapse(3)
+#pragma omp parallel for simd collapse(4)
   PLOOP ZLOOP {
     (*dU)[ip][k][j][i] += dS->U[ip][k][j][i] ;
   }

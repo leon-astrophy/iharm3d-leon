@@ -1,16 +1,16 @@
 #------------------------------------------------------------------
 
-### RUNTIME PARAMETERS FOR SANE accretion ###
+### RUNTIME PARAMETERS FOR LARGE-TORUS MAD###
 
 #------------------------------------------------------------------
-# these are essentials
+# these are essentials 
 
 # COORDINATES: finaltime, dt, and outer boundaries
-[dbl] tf = 0.1e0
+[dbl] tf = 20000.0
 [dbl] dt = 1.0e-06
 [dbl] Rout = 1000.0
 
-# FLUID: gas constant, cfl, and jitter
+# FLUID: gas constant, cfl
 [dbl] gam = 1.333333
 [dbl] cour = 0.7
 
@@ -22,7 +22,6 @@
 [int] DTp = 100
 
 # Electrons: electron/proton gas constant, heating rate, temperature ratio 
-# Not required for EHT (standard GRMHD), electron option set in parameters.h
 [dbl] game = 1.333333
 [dbl] gamp = 1.666667
 [dbl] fel0 = 0.01
@@ -32,8 +31,6 @@
 # GEOMETRY: BH spins, and MMKS stuff
 [dbl] a = 0.9375
 [dbl] hslope = 0.3
-
-# GEOMETRY: MMKS stuff
 [dbl] mks_smooth = 0.5
 [dbl] poly_xt = 0.82
 [dbl] poly_alpha = 14.0
@@ -43,23 +40,23 @@
 
 # Leon's patch, black hole mass (in solar mass) #
 # Also the unit conversion between code to cgs #
-[dbl] M_unit = 3.427459985890421e+24
+[dbl] M_unit = 1e20
 [dbl] mbh = 1e8
 
 # random perturbation #
 [dbl] u_jitter = 0.10
 
 # PROBLEM: inner torus radius, position of maximum pressure
-[dbl] rin = 10.0
-[dbl] rmax = 20.0
+[dbl] rin = 20.0
+[dbl] rmax = 41.0
 
-# DISCS: SANE/MAD, magnetization parameter
-[int] mad_type = 0
+# DISCS: SANE/MAD, magnetization parameter, black hole fluxes
+[int] mad_type = 1
 [dbl] beta = 100.0
+[dbl] BHflux = 0.0
 
-# NOT USED: MAD B-field prescription details
+# Used for mad_type = 4, Narayan '12 conditions
 [dbl] rBstart = 25.0
 [dbl] rBend = 810.0
-[dbl] BHflux = 0.0
 
 #------------------------------------------------------------------
