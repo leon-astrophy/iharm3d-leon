@@ -87,8 +87,8 @@ void init_cooling(struct GridGeom *G)
     }
     
     // target temperature //
-    t_gr[k][j][i] = M_PI_2*pow(h_r*rad*omg_gr[k][j][i],2);
-    //t_gr[k][j][i] = M_PI_2*(R_z/rad)*h_r*h_r;
+    //t_gr[k][j][i] = M_PI_2*pow(h_r*rad*omg_gr[k][j][i],2);
+    t_gr[k][j][i] = M_PI_2*(R_z/rad)*h_r*h_r;
 
   }
 

@@ -137,9 +137,17 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   /*--------------------------------------------------------------------------------------------*/
 
+  // plasma beta //
+  double bsq = bsq_calc(Ss, i, j, k);
+  double sigma = bsq/Ss->P[RHO][k][j][i];
+
   // sound speed, local approximation //
   double cs = sqrt(gam*(gam - 1.0)*Ss->P[UU][k][j][i]/(Ss->P[RHO][k][j][i] + gam*Ss->P[UU][k][j][i]));
-  h_th = (cs/fabs(ang_vel))*L_unit;
+  if(pflag[k][j][i] > 0) {
+    h_th = (cs/fabs(omg_gr[k][j][i]))*L_unit;
+  } else {
+    h_th = (cs/fabs(ang_vel))*L_unit;
+  }
   tau_depth = h_th*ntot*sigma_t;
 
   /***********************************************************************/
@@ -151,7 +159,6 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
   /* now calculate pair production rate */
 
   // magnetic field strength //
-  double bsq = bsq_calc(Ss, i, j, k);
   double bfield = sqrt(bsq)*B_unit;
 
   // net pair production rate, note the rate is in the CGS unit!!! //
@@ -168,8 +175,10 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     /* Basically a root finding, so use bisection mtehod */
     if(dt_real > q_alpha*qfac) {
 
+#if DEBUG
       /* print out */
       printf("net_rate too steep %d %d %d\n", i, j, k);
+#endif 
 
       /* left state */
       double zl = zfrac;
@@ -259,8 +268,10 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
     /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
 
     // limit the positron fractions by the thermal equilibrium condition //
-    double zmax = get_zfrac(nprot, thetae);
-    npost = fmin(npost, nprot*zmax);
+    ////////////////////////////////////////////////
+    //double zmax = get_zfrac(nprot, thetae);
+    //npost = fmin(npost, nprot*zmax);
+    ////////////////////////////////////////////////
 
     // update positron mass //
     Sf->P[RPL][k][j][i] = npost*(ME/RHO_unit);
@@ -680,20 +691,25 @@ inline double fbrem(double y, double taut, double theta, double xm) {
   double alpha = 3.0;
   double log_alpha = log(alpha);
   double logA = log(1.0+4.0*theta+16.0*theta*theta);
-  //if(taut > 1.0) { 
+  
+  /* Svensson 1984's formula, less accurate */
   if(y <= 1e3) {
     out = 2.0*(y*y - y*(1.0+y)*exp(-1.0/y));
   } else {
     out = 1.0 - 2.0/3.0/y;
   }
   out = out*exp(-log_alpha/pow(taut,2.0)/logA);
+  
+  // too computational expensive //
+  /////////////////////////////////////////////////////////////////////////////////
+  //if(taut > 1.0) { 
   //} else {
   //  double u0, u1, u2, u3, u4;
   //  double f0, f1, f2, f3, f4;
-  //  int n_grid = 100;
+  //  double dh = 1e-2;
   //  double stau = taut + pow(taut,2.0);
   //  double logthx = log(theta/xm);
-  //  double dh = (float)logthx/n_grid;
+  //  int n_grid = (int)logthx/dh;
   //  for (int o = 0; o <= n_grid; o += 4) {
   //    u0 = dh*(float)o;
   //    u1 = u0 + dh;
@@ -708,6 +724,8 @@ inline double fbrem(double y, double taut, double theta, double xm) {
   //    out = out + (2.0/45.0)*dh*(7.0*f0 + 32.0*f1 + 12.0*f2 + 32.0*f3 + 7.0*f4);
   //  }
   //}
+  /////////////////////////////////////////////////////////////////////////////////
+
   return out;
 }
 
@@ -782,7 +800,7 @@ inline double coulomb_onezone(double thetap, double thetae, double nprot, double
     // Get Coulomb heating rate.
     // Need to handle cases where thetap < 1e-2, Thetae < 1e-2, and both
     // Thetae and thetap < 1e-2 separately due to Bessel functions exploding
-    double prefac = 3.0/2.0*ME/MP*(nelec + npost)*(nprot)*logCoul*CL*KBOL*sigma_t*(Tp - Te);
+    double prefac = 3.0/2.0*ME/MP*(nelec + npost)*(nprot)*logCoul*CL*sigma_t*KBOL*(Tp - Te);
     double thetaCrit = 1.0e-2;
     if (thetae < thetaCrit && thetap < thetaCrit) {
       term1 = sqrt(thetam/(M_PI*thetae*thetap/2.0));                          
@@ -821,5 +839,7 @@ inline double safe_Kn(int n, double x)
     return gsl_sf_bessel_Kn(n, x);
   }
 }
+
+//******************************************************************************
 
 #endif
