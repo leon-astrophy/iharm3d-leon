@@ -143,7 +143,8 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // sound speed, local approximation //
   double cs = sqrt(gam*(gam - 1.0)*Ss->P[UU][k][j][i]/(Ss->P[RHO][k][j][i] + gam*Ss->P[UU][k][j][i]));
-  if(pflag[k][j][i] > 0) {
+  if(pflag[k][j][i] > 0.0) {
+  //if(sigma > 1.0) {
     h_th = (cs/fabs(omg_gr[k][j][i]))*L_unit;
   } else {
     h_th = (cs/fabs(ang_vel))*L_unit;
