@@ -116,11 +116,6 @@ int main(int argc, char *argv[])
     // Geneate initial conditions
     init(G, S);
 
-  // Leon's patch, initialize positrons //
-#if POSITRONS
-  init_positrons(G,S);
-#endif
-
     // Set globals
     nstep = 0;
     t = 0;
@@ -132,6 +127,11 @@ int main(int argc, char *argv[])
       fprintf(stdout, "Initial conditions generated\n\n");
   
   }
+
+  // Leon's patch, initialize positrons //
+#if POSITRONS && INIT_PAIRS
+  init_positrons(G,S);
+#endif
 
   // Leon's patch, initialize cooling //
 #if COOLING

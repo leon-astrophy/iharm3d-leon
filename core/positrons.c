@@ -54,7 +54,7 @@ void init_positrons(struct GridGeom *G, struct FluidState *S)
   
   // Set positron mass to its floor values //
   ZLOOPALL {
-    S->P[RPL][k][j][i] = ZMIN*ME_MP*S->P[RHO][k][j][i];
+    S->P[RPL][k][j][i] = ZMIN*ME_MP*RHOMINLIMIT; //S->P[RHO][k][j][i];
   }
 
   // Necessary?  Usually called right afterward
@@ -143,8 +143,7 @@ inline void pair_production_1zone(struct GridGeom *G, struct FluidState *Ss, str
 
   // sound speed, local approximation //
   double cs = sqrt(gam*(gam - 1.0)*Ss->P[UU][k][j][i]/(Ss->P[RHO][k][j][i] + gam*Ss->P[UU][k][j][i]));
-  if(pflag[k][j][i] > 0.0) {
-  //if(sigma > 1.0) {
+  if(sigma > 1.0) {
     h_th = (cs/fabs(omg_gr[k][j][i]))*L_unit;
   } else {
     h_th = (cs/fabs(ang_vel))*L_unit;
@@ -689,7 +688,7 @@ inline double find_xm(double z, double tau, double nprot, double theta) {
 /* fraction of up-scattered bremsstrahlung photon */
 inline double fbrem(double y, double taut, double theta, double xm) {
   double out = 0.0; 
-  double alpha = 3.0;
+  double alpha = 1.0;
   double log_alpha = log(alpha);
   double logA = log(1.0+4.0*theta+16.0*theta*theta);
   

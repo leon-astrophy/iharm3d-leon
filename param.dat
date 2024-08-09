@@ -6,7 +6,7 @@
 # these are essentials
 
 # COORDINATES: finaltime, dt, and outer boundaries
-[dbl] tf = 0.1e0
+[dbl] tf = 19939e0
 [dbl] dt = 1.0e-06
 [dbl] Rout = 1000.0
 
@@ -43,7 +43,7 @@
 
 # Leon's patch, black hole mass (in solar mass) #
 # Also the unit conversion between code to cgs #
-[dbl] M_unit = 3.427459985890421e+24
+[dbl] M_unit = 8.914691890243585e+23
 [dbl] mbh = 1e8
 
 # random perturbation #

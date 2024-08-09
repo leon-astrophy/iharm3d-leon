@@ -177,9 +177,9 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
 
   // Leon's patch, positrons //
 #if POSITRONS
-    rplflr_geom = RHOMIN*rhoscal;
-    rplflr_geom = MY_MAX(rplflr_geom, RHOMINLIMIT);
-    rplflr_geom = rplflr_geom*ZMIN*ME_MP;
+    //rplflr_geom = RHOMIN*rhoscal;
+    //rplflr_geom = MY_MAX(rplflr_geom, RHOMINLIMIT);
+    rplflr_geom = RHOMINLIMIT*ZMIN*ME_MP;
 #endif
 
   } else if (METRIC == MINKOWSKI) {
@@ -286,7 +286,7 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
   // Leon's patch, positrons, floors are applied seperately //
 #if POSITRONS
   if (rplflr_max > S->P[RPL][k][j][i]) { // Apply floors
-
+    printf("%.12e\n", rplflr_max);
     // Initialize a dummy fluid parcel
     PLOOP {
       Stmp->P[ip][k][j][i] = 0;

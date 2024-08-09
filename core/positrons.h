@@ -13,6 +13,9 @@
 // do we calculate e-p pair production? //
 #define PAIRS 1
 
+// initialize pairs? //
+#define INIT_PAIRS 1
+
 //******************************************************************************
 
 // Leon's patch, electron temperature //
