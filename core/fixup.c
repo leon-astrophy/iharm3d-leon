@@ -179,7 +179,7 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
 #if POSITRONS
     //rplflr_geom = RHOMIN*rhoscal;
     //rplflr_geom = MY_MAX(rplflr_geom, RHOMINLIMIT);
-    rplflr_geom = RHOMINLIMIT*ZMIN*ME_MP;
+    rplflr_geom = RPLMINLIMIT;
 #endif
 
   } else if (METRIC == MINKOWSKI) {
@@ -188,7 +188,7 @@ inline void fixup_floor(struct GridGeom *G, struct FluidState *S, int i, int j, 
 
     // Leon's patch, positrons //
 #if POSITRONS
-    rplflr_geom = RHOMIN*1.e-2*ZMIN*ME_MP;
+    rplflr_geom = RPLMIN*1.e-2;
 #endif
   }
 

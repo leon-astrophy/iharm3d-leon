@@ -54,7 +54,7 @@ void init_positrons(struct GridGeom *G, struct FluidState *S)
   
   // Set positron mass to its floor values //
   ZLOOPALL {
-    S->P[RPL][k][j][i] = ZMIN*ME_MP*RHOMINLIMIT; //S->P[RHO][k][j][i];
+    S->P[RPL][k][j][i] = RPLMINLIMIT; //S->P[RHO][k][j][i];
   }
 
   // Necessary?  Usually called right afterward

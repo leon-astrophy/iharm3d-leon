@@ -24,7 +24,6 @@
 // Leon's patch, fixup parameters for positron //
 #define RPLMINLIMIT (1.e-30)
 #define RPLMIN  (1.e-16)
-#define ZMIN (1.e-10)
 
 // bisection threshold //
 #define bisects (1e-6)
